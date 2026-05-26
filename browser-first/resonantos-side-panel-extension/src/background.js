@@ -7,6 +7,26 @@ const APPROVAL_REQUIRED_ACTIONS = new Set([
   "credential_autofill",
 ]);
 
+const WALLET_ACTIONS = new Set([
+  "wallet_connect",
+  "wallet_sign",
+  "wallet_switch_network",
+]);
+
+const BRIDGE_URL = "http://127.0.0.1:47773";
+
+/**
+ * logWalletActionToBridge — sends a wallet audit entry to the host bridge.
+ * Fire-and-forget: failures are logged to console only.
+ */
+function logWalletActionToBridge(payload) {
+  fetch(`${BRIDGE_URL}/audit/wallet`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).catch((err) => console.warn("[ResonantOS] Wallet audit log failed:", err));
+}
+
 const openResonantSidePanel = async (windowId) => {
   if (typeof chrome.sidePanel?.open !== "function" || windowId === undefined) {
     return;
@@ -21,6 +41,23 @@ chrome.runtime.onInstalled.addListener(() => {
       void openResonantSidePanel(window?.id);
     });
   }, 1500);
+
+  // Check if native messaging host (bridge) is available
+  try {
+    const port = chrome.runtime.connectNative("com.resonantos.bridge");
+    port.onMessage.addListener((msg) => {
+      if (msg?.ok) console.log("[ResonantOS] Bridge native host connected");
+      port.disconnect();
+    });
+    port.onDisconnect.addListener(() => {
+      const err = chrome.runtime.lastError?.message || "";
+      if (err.includes("not found") || err.includes("Specified native messaging host not found")) {
+        console.log("[ResonantOS] Bridge native host not installed. Bridge server on port 47773 required.");
+      }
+    });
+  } catch {
+    // Native messaging not available — bridge must be started manually
+  }
 });
 
 chrome.action.onClicked.addListener(async (tab) => {
@@ -37,6 +74,31 @@ chrome.commands.onCommand.addListener((command) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // ── Blackboard to-panel relay: blackboard tab → side panel ─────────────────
+  // Store in chrome.storage.session so the side panel can pick it up via onChanged listener.
+  if (message && message.channel === "resonantos.blackboard.to_panel") {
+    const record = { ...(message.payload ?? {}), _ts: Date.now() };
+    chrome.storage.session.set({ blackboardToPanel: record }).catch(() => undefined);
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  // ── Blackboard relay: side panel → blackboard tab ──────────────────────────
+  if (message && message.channel === "resonantos.blackboard.relay") {
+    chrome.tabs.query({}, (tabs) => {
+      const bbTab = tabs.find((t) => t.url?.includes("blackboard.html"));
+      if (bbTab) {
+        chrome.tabs.sendMessage(bbTab.id, message.payload, () => {
+          const err = chrome.runtime.lastError; // suppress unchecked error
+          sendResponse({ ok: true, relayed: true });
+        });
+      } else {
+        sendResponse({ ok: true, relayed: false, reason: "Blackboard tab not open" });
+      }
+    });
+    return true; // async
+  }
+
   if (!message || message.channel !== "resonantos.browser_first") {
     return false;
   }
@@ -55,13 +117,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "action_request") {
     const action = String(message.action ?? "");
     const approvalRequired = APPROVAL_REQUIRED_ACTIONS.has(action);
+    const isWalletAction = WALLET_ACTIONS.has(action);
+
+    // Log all wallet-related action requests to the audit trail.
+    if (isWalletAction) {
+      logWalletActionToBridge({
+        action,
+        pageUrl: sender.tab?.url ?? null,
+        walletAddress: message.walletAddress ?? null,
+        approved: !approvalRequired,
+        timestamp: new Date().toISOString(),
+        details: {
+          tabId: sender.tab?.id ?? null,
+          tabTitle: sender.tab?.title ?? null,
+          origin: message.origin ?? null,
+        },
+      });
+    }
+
     sendResponse({
       ok: !approvalRequired,
       approvalRequired,
       deniedToAutomation: approvalRequired,
       reason: approvalRequired
         ? "Wallet, credential, public-submit, and sensitive actions require explicit human approval."
-        : "Safe browser action can be routed through the governed ResonantOS tool bridge."
+        : "Safe browser action can be routed through the governed ResonantOS tool bridge.",
     });
     return true;
   }
