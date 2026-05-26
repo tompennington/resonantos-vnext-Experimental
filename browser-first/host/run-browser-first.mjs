@@ -207,6 +207,12 @@ async function readProviderSecrets() {
   return JSON.parse(await readFile(filePath, "utf8"));
 }
 
+async function writeProviderSecrets(secrets) {
+  const filePath = providerSecretsPath();
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, JSON.stringify(secrets, null, 2) + "\n");
+}
+
 function sanitizeAssistantContent(providerType, content) {
   if (providerType !== "minimax") {
     return String(content ?? "").trim();
@@ -1007,6 +1013,118 @@ async function executeSystemStatus() {
   };
 }
 
+async function executeProviderList(payload) {
+  const secrets = await readProviderSecrets();
+  const providers = Object.entries(secrets).map(([id, key]) => ({
+    id,
+    hasKey: Boolean(key),
+    maskedKey: key ? key.slice(0, 6) + "..." : null,
+  }));
+  return { ok: true, providers };
+}
+
+async function executeProviderSave(payload) {
+  const secrets = await readProviderSecrets();
+  const updates = payload.providers ?? {};
+  for (const [id, key] of Object.entries(updates)) {
+    const safeId = String(id).replace(/[^a-z0-9_-]/gi, "").slice(0, 64);
+    const safeKey = String(key).trim().slice(0, 256);
+    if (safeKey) {
+      secrets[safeId] = safeKey;
+    } else {
+      delete secrets[safeId];
+    }
+  }
+  await writeProviderSecrets(secrets);
+  return { ok: true, saved: Object.keys(updates) };
+}
+
+async function executeWalletBalances(payload) {
+  const address = String(payload.address ?? "").trim();
+  if (!address) return { ok: false, error: "Missing wallet address" };
+  try {
+    const rpcUrl = "https://api.devnet.solana.com";
+    const balanceRes = await fetch(rpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [address] }),
+    });
+    const balanceData = await balanceRes.json();
+    const solBalance = (balanceData.result?.value ?? 0) / 1e9;
+    return { ok: true, address, balances: { SOL: solBalance, RCT: 0, RES: 0 } };
+  } catch (err) {
+    return { ok: false, error: String(err.message ?? err) };
+  }
+}
+
+async function executeWalletAirdrop(payload) {
+  const address = String(payload.address ?? "").trim();
+  if (!address) return { ok: false, error: "Missing wallet address" };
+  try {
+    const rpcUrl = "https://api.devnet.solana.com";
+    const res = await fetch(rpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "requestAirdrop", params: [address, 1000000000] }),
+    });
+    const data = await res.json();
+    if (data.error) return { ok: false, error: data.error.message };
+    return { ok: true, signature: data.result, amount: 1.0 };
+  } catch (err) {
+    return { ok: false, error: String(err.message ?? err) };
+  }
+}
+
+async function executeWalletAudit(payload) {
+  const logDir = path.join(userRoot(), "Logs");
+  await mkdir(logDir, { recursive: true });
+  const entry = { ...payload, serverTs: new Date().toISOString() };
+  await appendFile(path.join(logDir, "wallet-audit.jsonl"), JSON.stringify(entry) + "\n");
+  return { ok: true };
+}
+
+async function executeTribes(payload) {
+  const tRoot = path.join(userRoot(), "BrowserFirst", "Tribes");
+  await mkdir(tRoot, { recursive: true });
+  const files = await readdir(tRoot).catch(() => []);
+  const tribes = [];
+  for (const f of files.filter(n => n.endsWith(".json"))) {
+    try {
+      const data = JSON.parse(await readFile(path.join(tRoot, f), "utf8"));
+      tribes.push(data);
+    } catch {}
+  }
+  return { ok: true, tribes };
+}
+
+async function executeBounties(payload) {
+  const bRoot = path.join(userRoot(), "BrowserFirst", "Bounties");
+  await mkdir(bRoot, { recursive: true });
+  const files = await readdir(bRoot).catch(() => []);
+  const bounties = [];
+  for (const f of files.filter(n => n.endsWith(".json"))) {
+    try {
+      const data = JSON.parse(await readFile(path.join(bRoot, f), "utf8"));
+      bounties.push(data);
+    } catch {}
+  }
+  return { ok: true, bounties };
+}
+
+async function executeStoreProtocols(payload) {
+  const storeRoot = path.join(userRoot(), "BrowserFirst", "Store");
+  await mkdir(storeRoot, { recursive: true });
+  const files = await readdir(storeRoot).catch(() => []);
+  const protocols = [];
+  for (const f of files.filter(n => n.endsWith(".json"))) {
+    try {
+      const data = JSON.parse(await readFile(path.join(storeRoot, f), "utf8"));
+      protocols.push(data);
+    } catch {}
+  }
+  return { ok: true, protocols };
+}
+
 const bridgeRoutes = [
   { method: "GET", path: "/status", handler: executeSystemStatus },
   { method: "POST", path: "/augmentor/chat", handler: executeBridgeChat },
@@ -1020,6 +1138,14 @@ const bridgeRoutes = [
   { method: "POST", path: "/web/news", handler: executeNewsSearch },
   { method: "POST", path: "/addons/delegate", handler: executeDelegationRecord },
   { method: "POST", path: "/goals", handler: executeGoalRecord },
+  { method: "GET", path: "/providers/list", handler: executeProviderList },
+  { method: "POST", path: "/providers/save", handler: executeProviderSave },
+  { method: "GET", path: "/wallet/balances", handler: executeWalletBalances },
+  { method: "POST", path: "/wallet/airdrop", handler: executeWalletAirdrop },
+  { method: "POST", path: "/audit/wallet", handler: executeWalletAudit },
+  { method: "GET", path: "/tribes/list", handler: executeTribes },
+  { method: "GET", path: "/bounties/list", handler: executeBounties },
+  { method: "GET", path: "/store/protocols", handler: executeStoreProtocols },
 ];
 
 const args = parseArgs(process.argv.slice(2));
