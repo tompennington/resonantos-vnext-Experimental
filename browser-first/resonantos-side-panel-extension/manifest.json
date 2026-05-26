@@ -33,5 +33,25 @@
       },
       "description": "Open the Augmentor side panel"
     }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/protocol-store.html",
+        "src/protocol-store.js",
+        "src/blackboard.html",
+        "src/blackboard.js",
+        "src/blackboard.css",
+        "src/side-panel.css",
+        "src/resonant-context.js",
+        "src/context-plugins.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   }
 }
