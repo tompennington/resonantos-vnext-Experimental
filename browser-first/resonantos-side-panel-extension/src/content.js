@@ -6,6 +6,86 @@ const controlBubbleClass = "resonantos-control-bubble";
 const controlToastId = "resonantos-control-toast";
 let nextControlRef = 1;
 
+// ---- Resonant Context SDK Integration ----
+// resonant-context.js and context-plugins.js are injected before this file.
+// They attach window.ResonantContext and window.getPluginForDomain.
+
+var _rcInstance = null;
+
+var getOrInitRC = function () {
+  if (_rcInstance) return _rcInstance;
+  if (window !== window.top) return null; // top-frame guard: no RC SDK in iframes
+  if (typeof ResonantContext === 'undefined' || typeof getPluginForDomain === 'undefined') {
+    return null;
+  }
+  try {
+    var plugin = getPluginForDomain(location.hostname);
+    _rcInstance = ResonantContext.init({ plugin: plugin, debug: false });
+  } catch (e) {
+    console.warn('[RC] SDK init failed:', e);
+    _rcInstance = null;
+  }
+  return _rcInstance;
+};
+
+// Auto-initialize on script load so observers start tracking immediately.
+setTimeout(getOrInitRC, 500);
+
+var calculateContextRichness = function (ctx) {
+  if (!ctx) return 10;
+  var score = 20;
+  var visibleSections = (ctx.viewport && ctx.viewport.visibleSections) || [];
+  var forms = ctx.forms || [];
+  var clicks = (ctx.session && ctx.session.clickTrail) || [];
+  var timeOnPage = (ctx.page && ctx.page.timeOnPageMs) || 0;
+  if (visibleSections.length > 0) score += 25;
+  if (forms.some(function (f) { return f.completeness > 0; })) score += 15;
+  if (clicks.length > 0) score += 15;
+  if (timeOnPage > 5000) score += 10;
+  if (ctx.viewport && ctx.viewport.activeOverlay) score += 5;
+  if (visibleSections.some(function (s) { return s.dwellMs > 2000; })) score += 9;
+  return Math.min(99, score);
+};
+
+// ---- Security: Injection Detection ----
+
+const HTML_ENTITY_RE = /&(?:#\d+|#x[0-9a-f]+|[a-z]+);/gi;
+
+const INJECTION_PATTERNS = [
+  /ignore\s+(?:previous|prior|above|all)\s+(?:instructions?|prompts?|context)/i,
+  /system\s*:/i,
+  /\[INST\]/i,
+  /<\|im_start\|>/i,
+  /<\|im_end\|>/i,
+  /\[\[SYSTEM\]\]/i,
+  /###\s*(?:instruction|system|assistant|human)/i,
+  /you\s+are\s+now\s+(?:a|an|the)\s+/i,
+  /disregard\s+(?:previous|your|all)\s+(?:instructions?|prompts?|training)/i,
+  /act\s+as\s+(?:a|an|the)\s+(?:different|new|evil|unrestricted)/i,
+];
+
+const sanitizePageText = (raw) => {
+  let text = String(raw ?? "").slice(0, 8000);
+  text = text.replace(HTML_ENTITY_RE, " ");
+  text = text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
+  return text;
+};
+
+const detectInjection = (text) => INJECTION_PATTERNS.some((pattern) => pattern.test(text));
+
+const logSecurityEvent = (event) => {
+  const entry = { ts: new Date().toISOString(), url: location.href, ...event };
+  chrome.storage.local.get(["securityLog"], (result) => {
+    const log = Array.isArray(result.securityLog) ? result.securityLog : [];
+    const updated = [...log, entry].slice(-20);
+    chrome.storage.local.set({ securityLog: updated });
+  });
+};
+
+// Rate limiting for read_page: max 1 per 2 seconds
+let lastReadPageAt = 0;
+const READ_PAGE_COOLDOWN_MS = 2000;
+
 const ensureControlRef = (element) => {
   if (!element?.getAttribute) return "";
   const existing = element.getAttribute(controlRefAttribute);
@@ -22,14 +102,18 @@ const elementByControlRef = (ref) => {
   return document.querySelector(`[${controlRefAttribute}="${CSS.escape(normalized)}"]`);
 };
 
-const pageSnapshot = () => ({
+const pageSnapshot = () => {
+  const rawText = document.body?.innerText ?? "";
+  const hasSuspiciousContent = detectInjection(rawText);
+  if (hasSuspiciousContent) logSecurityEvent({ type: "injection_detected", text: rawText.slice(0, 200) });
+  return {
   title: document.title,
   url: location.href,
   frame: {
     isTop: window.top === window,
     referrer: document.referrer || ""
   },
-  text: document.body?.innerText?.slice(0, 12000) ?? "",
+  text: rawText.slice(0, 12000),
   iframes: Array.from(document.querySelectorAll("iframe"))
     .slice(0, 20)
     .map((frame) => ({
@@ -65,7 +149,30 @@ const pageSnapshot = () => ({
   walletProviders: {
     phantomSolana: Boolean(globalThis.phantom?.solana?.isPhantom || globalThis.solana?.isPhantom)
   }
-});
+  };
+};
+
+const richPageSnapshot = () => {
+  const base = pageSnapshot();
+  if (window !== window.top) return base; // no RC in iframes
+  const rc = getOrInitRC();
+  if (!rc) return base;
+  try {
+    const ctx = rc.getContext();
+    return {
+      ...base,
+      resonantContext: {
+        visibleSections: ctx.visibleSections || [],
+        overlayActive: ctx.overlayActive || false,
+        scrollDepthPercent: ctx.scrollDepthPercent || 0,
+        formState: ctx.formState || [],
+        activeDwellSection: ctx.activeDwellSection || null,
+        topPrioritySection: ctx.topPrioritySection || null,
+        richness: calculateContextRichness(ctx),
+      },
+    };
+  } catch { return base; }
+};
 
 const ensureControlOverlay = () => {
   if (!document.getElementById("resonantos-control-overlay-styles")) {
@@ -667,7 +774,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       pulseControlOverlay({ state: "active", label: "Reading page context" });
     }
     window.setTimeout(() => pulseControlOverlay({ state: "done", label: "Page context captured" }), 300);
-    sendResponse({ ok: true, snapshot: pageSnapshot() });
+    // Rate limit read_page — skip if agent control is actively running (observe loop needs fast reads)
+    const controlActive = document.getElementById(controlOverlayId)?.dataset.session === "active";
+    const now = Date.now();
+    if (!controlActive && now - lastReadPageAt < READ_PAGE_COOLDOWN_MS) {
+      logSecurityEvent({ type: "rate_limit_hit", detail: "read_page throttled" });
+      sendResponse({ ok: false, error: "Rate limited: max 1 read_page per 2 seconds." });
+      return true;
+    }
+    lastReadPageAt = now;
+    sendResponse({ ok: true, snapshot: richPageSnapshot() });
     return true;
   }
 
@@ -695,6 +811,105 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "detect_forms") {
     sendResponse({ ok: true, ...describeForms() });
+    return true;
+  }
+
+  // ---- Wallet Actions ----
+
+  if (message.type === "wallet_detect") {
+    const wallet = globalThis.phantom?.solana ?? globalThis.solana ?? null;
+    const provider = wallet ? (globalThis.phantom?.solana?.isPhantom ? "Phantom" : "Solana Wallet") : null;
+    const connected = Boolean(wallet?.isConnected || wallet?.publicKey);
+    const address = wallet?.publicKey ? String(wallet.publicKey) : null;
+    sendResponse({ ok: true, provider, connected, address, network: wallet?.network ?? "mainnet-beta" });
+    return true;
+  }
+
+  if (message.type === "wallet_connect") {
+    const wallet = globalThis.phantom?.solana ?? globalThis.solana ?? null;
+    if (!wallet) {
+      sendResponse({ ok: false, error: "No Solana wallet provider found on this page." });
+      return true;
+    }
+    (async () => {
+      try {
+        const result = await wallet.connect();
+        const address = result?.publicKey ? String(result.publicKey) : wallet.publicKey ? String(wallet.publicKey) : null;
+        sendResponse({ ok: true, address, network: wallet.network ?? "mainnet-beta" });
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === "wallet_disconnect") {
+    const wallet = globalThis.phantom?.solana ?? globalThis.solana ?? null;
+    if (!wallet) { sendResponse({ ok: true }); return true; }
+    (async () => {
+      try { await wallet.disconnect(); sendResponse({ ok: true }); }
+      catch (error) { sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }); }
+    })();
+    return true;
+  }
+
+  if (message.type === "wallet_balance") {
+    const address = String(message.address ?? "").trim();
+    if (!address) { sendResponse({ ok: false, error: "No address provided for balance query." }); return true; }
+    const wallet = globalThis.phantom?.solana ?? globalThis.solana ?? null;
+    const network = wallet?.network ?? "mainnet-beta";
+    const endpoint = network === "mainnet-beta" ? "https://api.mainnet-beta.solana.com" : "https://api.devnet.solana.com";
+    (async () => {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [address] }),
+        });
+        const data = await res.json();
+        const lamports = data?.result?.value ?? 0;
+        sendResponse({ ok: true, balance: (lamports / 1_000_000_000).toFixed(4), network });
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === "wallet_sign_transaction") {
+    sendResponse({ ok: false, approvalRequired: true, error: "Transaction signing requires direct Phantom interaction. Please sign in Phantom." });
+    return true;
+  }
+
+  // ---- Resonator Visual Guide Layer ----
+
+  if (message.type === "resonator_highlight") {
+    if (typeof window.Resonator === "undefined") { sendResponse({ ok: false, error: "Resonator not loaded" }); }
+    else { sendResponse(window.Resonator.highlight(message)); }
+    return true;
+  }
+
+  if (message.type === "resonator_arrow") {
+    if (typeof window.Resonator === "undefined") { sendResponse({ ok: false, error: "Resonator not loaded" }); }
+    else { sendResponse(window.Resonator.arrow(message)); }
+    return true;
+  }
+
+  if (message.type === "resonator_spotlight") {
+    if (typeof window.Resonator === "undefined") { sendResponse({ ok: false, error: "Resonator not loaded" }); }
+    else { sendResponse(window.Resonator.spotlight(message)); }
+    return true;
+  }
+
+  if (message.type === "resonator_step") {
+    if (typeof window.Resonator === "undefined") { sendResponse({ ok: false, error: "Resonator not loaded" }); }
+    else { sendResponse(window.Resonator.step(message)); }
+    return true;
+  }
+
+  if (message.type === "resonator_clear") {
+    if (typeof window.Resonator !== "undefined") window.Resonator.clearAll();
+    sendResponse({ ok: true });
     return true;
   }
 
