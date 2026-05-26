@@ -1,14 +1,33 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src http://127.0.0.1:47773; img-src 'self' data:;" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Augmentor</title>
     <link rel="stylesheet" href="./side-panel.css" />
   </head>
   <body>
+    <!-- Bridge offline/online status banner (OURS) -->
+    <div id="bridge-banner" class="bridge-banner" hidden aria-live="assertive"></div>
+
+    <!-- Wallet status banner (OURS) -->
+    <div id="wallet-banner" class="wallet-banner" hidden aria-live="polite"></div>
+
     <main class="chat-shell" aria-label="Augmentor chat">
+      <!-- Panel header with title + theme + settings (OURS) -->
+      <header class="panel-header">
+        <span class="panel-title">◈ ResonantOS</span>
+        <div class="header-actions">
+          <button id="theme-toggle" type="button" class="icon-button" title="Toggle light/dark mode" aria-label="Toggle theme">🌙</button>
+          <button id="settings-toggle" type="button" class="icon-button" title="Settings" aria-label="Open settings">⚙</button>
+        </div>
+      </header>
+
+      <!-- Chat transcript (HIS) -->
       <section id="transcript" class="transcript" aria-live="polite"></section>
+
+      <!-- Context dock — site permissions, job monitor, control monitor (HIS) -->
       <section id="context-dock" class="context-dock" aria-label="Browser context and task status" hidden>
         <section id="activity-panel" class="activity-panel" aria-live="polite" hidden>
           <span class="activity-pulse"></span>
@@ -63,6 +82,7 @@
         </section>
       </section>
 
+      <!-- Composer form (MERGED — his structure + our extras) -->
       <form id="command-form" class="composer" aria-label="Message Augmentor">
         <textarea id="command-input" rows="3" placeholder="Message Augmentor"></textarea>
         <div id="attachment-strip" class="attachment-strip" hidden></div>
@@ -72,25 +92,173 @@
           <button id="read-page" type="button" class="icon-button" title="Read current page" aria-label="Read current page">◎</button>
           <button id="save-intake" type="button" class="toolbar-button" title="Prepare current page for Living Archive intake">Intake</button>
           <button id="context-toggle" type="button" class="toolbar-button" title="Show browser context, site permissions, and jobs">Status</button>
+          <!-- Extended model select (OURS — 7 providers) -->
           <select id="model-select" class="model-select" aria-label="Connected model">
-            <option value="MiniMax-M2.7">MiniMax 2.7</option>
-            <option value="MiniMax-M2.7-highspeed">MiniMax 2.7 High Speed</option>
-            <option value="gpt-5.5">GPT 5.5</option>
-            <option value="gpt-5.4-mini">GPT 5.4 Mini</option>
-            <option value="batiai/gemma4-e2b:q4">Gemma 4 2B</option>
+            <optgroup label="OpenAI">
+              <option value="gpt-5.5">GPT 5.5</option>
+              <option value="gpt-5.4-mini">GPT 5.4 Mini</option>
+              <option value="gpt-4o">GPT-4o</option>
+            </optgroup>
+            <optgroup label="Anthropic">
+              <option value="claude-sonnet-4">Claude Sonnet 4</option>
+              <option value="claude-opus-4">Claude Opus 4</option>
+            </optgroup>
+            <optgroup label="MiniMax">
+              <option value="MiniMax-M2.7">MiniMax 2.7</option>
+              <option value="MiniMax-M2.7-highspeed">MiniMax 2.7 High Speed</option>
+            </optgroup>
+            <optgroup label="Groq">
+              <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
+              <option value="llama-4-scout">Llama 4 Scout</option>
+            </optgroup>
+            <optgroup label="DeepSeek">
+              <option value="deepseek-chat">DeepSeek Chat</option>
+              <option value="deepseek-reasoner">DeepSeek Reasoner</option>
+            </optgroup>
+            <optgroup label="xAI">
+              <option value="grok-4">Grok 4</option>
+              <option value="grok-3">Grok 3</option>
+            </optgroup>
           </select>
           <select id="thinking-depth" class="depth-select" aria-label="Thinking depth">
             <option value="minimal">Minimal</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
-          <button id="dictate-button" type="button" class="icon-button muted" title="Audio dictate is not available in this browser runtime yet." aria-label="Dictate">mic</button>
+          <button id="dictate-button" type="button" class="icon-button muted" title="Audio dictate" aria-label="Dictate">mic</button>
           <span id="context-meter" class="context-meter" title="Estimated browser context captured for this session.">0%</span>
           <button type="submit" class="send-button" aria-label="Send message">➜</button>
         </div>
         <p id="connection-line" class="connection-line">Connected to MiniMax 2.7 · Ready</p>
       </form>
     </main>
+
+    <!-- Side panels container — DAO panels (OURS, collapsible) -->
+    <div class="side-panels-container">
+      <details class="panel-section" id="wallet-section">
+        <summary class="panel-section-summary">◈ Wallet</summary>
+        <div class="panel-section-body" id="wallet-body">
+          <p class="panel-section-placeholder">Detecting Phantom wallet…</p>
+        </div>
+      </details>
+
+      <details class="panel-section" id="tribes-section">
+        <summary class="panel-section-summary">◈ Tribes</summary>
+        <div class="panel-section-body" id="tribes-body">
+          <p class="panel-section-placeholder">Loading tribes…</p>
+        </div>
+      </details>
+
+      <details class="panel-section" id="bounties-section">
+        <summary class="panel-section-summary">◈ Bounties</summary>
+        <div class="panel-section-body" id="bounties-body">
+          <p class="panel-section-placeholder">Loading bounties…</p>
+        </div>
+      </details>
+
+      <details class="panel-section" id="governance-section">
+        <summary class="panel-section-summary">◈ Governance</summary>
+        <div class="panel-section-body" id="governance-body">
+          <p class="panel-section-placeholder">Loading proposals…</p>
+        </div>
+      </details>
+
+      <details class="panel-section" id="shield-section">
+        <summary class="panel-section-summary">◈ Shield</summary>
+        <div class="panel-section-body" id="shield-body">
+          <p class="panel-section-placeholder">Loading security events…</p>
+        </div>
+      </details>
+
+      <div class="panel-section panel-section-link" id="store-section">
+        <button type="button" class="panel-section-summary panel-nav-btn" id="open-store-tab">◈ Protocol Store</button>
+      </div>
+
+      <details class="panel-section" id="archive-section">
+        <summary class="panel-section-summary">◈ Archive</summary>
+        <div class="panel-section-body" id="archive-body">
+          <div class="archive-search-row">
+            <input id="archive-search-input" type="search" class="archive-search" placeholder="Search Living Archive…" autocomplete="off" />
+            <button type="button" class="store-action-btn" id="archive-search-btn">Search</button>
+          </div>
+          <div id="archive-results" class="archive-results"></div>
+          <div class="archive-meta">
+            <div class="awareness-metric">
+              <span class="awareness-label">Wiki pages</span>
+              <span class="awareness-value" id="archive-wiki-pages">—</span>
+            </div>
+            <div class="awareness-metric">
+              <span class="awareness-label">Intakes</span>
+              <span class="awareness-value" id="archive-intakes">—</span>
+            </div>
+          </div>
+          <button type="button" class="store-action-btn" id="archive-quick-save">Quick Save Current Page</button>
+        </div>
+      </details>
+
+      <details class="panel-section" id="awareness-section">
+        <summary class="panel-section-summary">◈ R-Awareness</summary>
+        <div class="panel-section-body" id="awareness-body">
+          <div class="awareness-metrics">
+            <div class="awareness-metric">
+              <span class="awareness-label">Context richness</span>
+              <span class="awareness-value" id="aw-richness">—</span>
+            </div>
+            <div class="awareness-metric">
+              <span class="awareness-label">Visible sections</span>
+              <span class="awareness-value" id="aw-sections">—</span>
+            </div>
+            <div class="awareness-metric">
+              <span class="awareness-label">Active dwell</span>
+              <span class="awareness-value" id="aw-dwell">—</span>
+            </div>
+            <div class="awareness-metric">
+              <span class="awareness-label">Domain plugin</span>
+              <span class="awareness-value" id="aw-plugin">—</span>
+            </div>
+          </div>
+          <button type="button" class="store-action-btn" id="aw-refresh-btn">Refresh Context</button>
+        </div>
+      </details>
+    </div>
+
+    <!-- Settings overlay (OURS) -->
+    <div id="settings-overlay" class="settings-overlay" hidden role="dialog" aria-modal="true" aria-label="Settings">
+      <div class="settings-panel">
+        <div class="settings-header">
+          <strong>ResonantOS Settings</strong>
+          <button id="settings-close" type="button" class="icon-button" aria-label="Close settings">✕</button>
+        </div>
+        <p class="settings-hint">Enter provider API keys to enable AI models. Keys are stored locally on your machine.</p>
+        <div class="settings-fields">
+          <div>
+            <div class="settings-label">OpenAI API Key <span id="key-openai-current" class="settings-current"></span></div>
+            <input id="key-openai" type="password" class="settings-input" placeholder="sk-proj-…" autocomplete="off" />
+          </div>
+          <div>
+            <div class="settings-label">MiniMax API Key <span id="key-minimax-current" class="settings-current"></span></div>
+            <input id="key-minimax" type="password" class="settings-input" placeholder="eyJ…" autocomplete="off" />
+          </div>
+        </div>
+        <div class="settings-panel-header" style="margin-top:14px;">
+          <span style="font-size:0.72rem;color:var(--muted);font-weight:600;">Appearance</span>
+          <button id="theme-toggle-settings" type="button" class="settings-theme-btn">Switch to Light Mode</button>
+        </div>
+        <div class="mobile-access-section">
+          <div class="mobile-url-row">
+            <span class="mobile-url">resonantclaw.com</span>
+            <button id="copy-mobile-url" type="button" class="mobile-copy-btn">Copy URL</button>
+          </div>
+          <p class="mobile-note">Scan or share this URL to use ResonantOS on mobile.</p>
+        </div>
+        <div class="settings-footer">
+          <button id="settings-save" type="button" class="settings-save-button">Save Keys</button>
+          <span id="settings-status" class="settings-status-text"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bridge config token (HIS — must load BEFORE module script) -->
     <script src="./bridge-config.generated.js"></script>
     <script type="module" src="./side-panel.js"></script>
   </body>
