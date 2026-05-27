@@ -44,7 +44,13 @@
         "src/blackboard.css",
         "src/side-panel.css",
         "src/resonant-context.js",
-        "src/context-plugins.js"
+        "src/context-plugins.js",
+        "src/shield-tab.html",
+        "src/shield-tab.js",
+        "src/archive-tab.html",
+        "src/archive-tab.js",
+        "src/awareness-tab.html",
+        "src/awareness-tab.js"
       ],
       "matches": []
     }

@@ -62,7 +62,6 @@ const approvalDelegateButton = document.querySelector("#approval-delegate");
 
 // === Tom/Analog6 product features ===
 const bridgeBanner = document.getElementById("bridge-banner");
-const walletBanner = document.getElementById("wallet-banner");
 const themeToggle = document.getElementById("theme-toggle");
 const settingsToggleBtn = document.getElementById("settings-toggle");
 const settingsOverlay = document.getElementById("settings-overlay");
@@ -72,10 +71,9 @@ const settingsStatus = document.getElementById("settings-status");
 const themeToggleSettings = document.getElementById("theme-toggle-settings");
 const copyMobileUrl = document.getElementById("copy-mobile-url");
 const openStoreBtn = document.getElementById("open-store-tab");
-const archiveSearchBtn = document.getElementById("archive-search-btn");
-const archiveSearchInput = document.getElementById("archive-search-input");
-const archiveQuickSave = document.getElementById("archive-quick-save");
-const awRefreshBtn = document.getElementById("aw-refresh-btn");
+const openShieldBtn = document.getElementById("open-shield-tab");
+const openArchiveBtn = document.getElementById("open-archive-tab");
+const openAwarenessBtn = document.getElementById("open-awareness-tab");
 
 function escapeHtml(text) {
   const div = document.createElement("div");
@@ -827,122 +825,31 @@ const openProtocolStore = async () => {
 };
 if (openStoreBtn) openStoreBtn.addEventListener("click", () => void openProtocolStore());
 
-// === DAO panel data loaders ===
-const walletSection = document.getElementById("wallet-section");
-if (walletSection) {
-  walletSection.addEventListener("toggle", async () => {
-    if (!walletSection.open) return;
-    const body = document.getElementById("wallet-body");
-    if (!body) return;
-    try {
-      // Wallet detection is handled by wallet-adapter.js
-      // Just show a status message for now
-      body.innerHTML = '<p class="panel-section-placeholder">Wallet panel ready. Connect via Phantom.</p>';
-    } catch {}
-  });
-}
-
-const tribesSection = document.getElementById("tribes-section");
-if (tribesSection) {
-  tribesSection.addEventListener("toggle", async () => {
-    if (!tribesSection.open) return;
-    const body = document.getElementById("tribes-body");
-    if (!body) return;
-    try {
-      const result = await bridgeRequest("/tribes/list");
-      const tribes = result.tribes ?? [];
-      if (!tribes.length) { body.innerHTML = '<p class="panel-section-placeholder">No tribes yet.</p>'; return; }
-      body.innerHTML = tribes.map(t => `<div class="panel-card"><strong>${escapeHtml(t.name || "Unnamed")}</strong><p>${escapeHtml(t.description || "")}</p><span class="panel-badge">${escapeHtml(t.focus || "")}</span></div>`).join("");
-    } catch (err) { body.innerHTML = `<p class="panel-section-error">Tribes unavailable: ${err.message || err}</p>`; }
-  });
-}
-
-const bountiesSection = document.getElementById("bounties-section");
-if (bountiesSection) {
-  bountiesSection.addEventListener("toggle", async () => {
-    if (!bountiesSection.open) return;
-    const body = document.getElementById("bounties-body");
-    if (!body) return;
-    try {
-      const result = await bridgeRequest("/bounties/list");
-      const bounties = result.bounties ?? [];
-      if (!bounties.length) { body.innerHTML = '<p class="panel-section-placeholder">No bounties yet.</p>'; return; }
-      body.innerHTML = bounties.map(b => `<div class="panel-card"><strong>${escapeHtml(b.title || "Unnamed")}</strong><p>${escapeHtml(b.description || "")}</p><span class="panel-badge">${escapeHtml(String(b.reward ?? 0))} ${escapeHtml(b.rewardToken ?? "RES")}</span><span class="panel-badge status-${escapeHtml(b.status ?? "open")}">${escapeHtml(b.status ?? "open")}</span></div>`).join("");
-    } catch (err) { body.innerHTML = `<p class="panel-section-error">Bounties unavailable: ${err.message || err}</p>`; }
-  });
-}
-
-// Governance + Shield — load on expand (similar pattern)
-const governanceSection = document.getElementById("governance-section");
-if (governanceSection) {
-  governanceSection.addEventListener("toggle", () => {
-    if (!governanceSection.open) return;
-    const body = document.getElementById("governance-body");
-    if (body) body.innerHTML = '<p class="panel-section-placeholder">Governance proposals coming soon.</p>';
-  });
-}
-
-const shieldSection = document.getElementById("shield-section");
-if (shieldSection) {
-  shieldSection.addEventListener("toggle", () => {
-    if (!shieldSection.open) return;
-    const body = document.getElementById("shield-body");
-    if (body) body.innerHTML = '<p class="panel-section-placeholder">Security audit trail loading…</p>';
-  });
-}
-
-// === Archive panel ===
-if (archiveSearchBtn && archiveSearchInput) {
-  archiveSearchBtn.addEventListener("click", async () => {
-    const query = archiveSearchInput.value.trim();
-    if (!query) return;
-    const resultsDiv = document.getElementById("archive-results");
-    if (!resultsDiv) return;
-    resultsDiv.innerHTML = '<p class="panel-section-placeholder">Searching…</p>';
-    try {
-      const result = await bridgeRequest("/memory/search", { method: "POST", body: { query } });
-      const hits = result.results ?? [];
-      if (!hits.length) { resultsDiv.innerHTML = '<p class="panel-section-placeholder">No results.</p>'; return; }
-      resultsDiv.innerHTML = hits.map(h => `<div class="archive-result"><strong>${escapeHtml(h.title || h.path || "Untitled")}</strong><p>${escapeHtml((h.snippet || "").slice(0, 200))}</p></div>`).join("");
-    } catch (err) { resultsDiv.innerHTML = `<p class="panel-section-error">${err.message || err}</p>`; }
-  });
-}
-
-if (archiveQuickSave) {
-  archiveQuickSave.addEventListener("click", async () => {
-    archiveQuickSave.disabled = true;
-    archiveQuickSave.textContent = "Saving…";
-    try {
-      const tab = await chrome.tabs.query({ active: true, currentWindow: true }).then(t => t[0]);
-      if (!tab) throw new Error("No active tab");
-      await bridgeRequest("/archive/intake", { method: "POST", body: { url: tab.url, title: tab.title, source: "quick-save" } });
-      archiveQuickSave.textContent = "Saved ✓";
-      setTimeout(() => { archiveQuickSave.textContent = "Quick Save Current Page"; archiveQuickSave.disabled = false; }, 2000);
-    } catch (err) {
-      archiveQuickSave.textContent = "Error";
-      setTimeout(() => { archiveQuickSave.textContent = "Quick Save Current Page"; archiveQuickSave.disabled = false; }, 2000);
+// === Sidecar tab openers ===
+const makeSidecarOpener = (filename) => {
+  let tabId = null;
+  return async () => {
+    if (tabId) {
+      const alive = await chrome.tabs.get(tabId).catch(() => null);
+      if (alive) { await chrome.tabs.update(tabId, { active: true }).catch(() => undefined); return; }
+      tabId = null;
     }
-  });
-}
+    const tabs = await chrome.tabs.query({});
+    const existing = tabs.find(t => t.url?.includes(filename));
+    if (existing) { tabId = existing.id; await chrome.tabs.update(tabId, { active: true }).catch(() => undefined); return; }
+    const url = chrome.runtime.getURL(`src/${filename}`);
+    const tab = await chrome.tabs.create({ url });
+    tabId = tab.id ?? null;
+  };
+};
 
-// === R-Awareness panel ===
-if (awRefreshBtn) {
-  awRefreshBtn.addEventListener("click", async () => {
-    try {
-      const tab = await chrome.tabs.query({ active: true, currentWindow: true }).then(t => t[0]);
-      if (!tab?.id) return;
-      const response = await chrome.tabs.sendMessage(tab.id, { channel: "resonantos.browser_first.content", type: "read_page" });
-      const ctx = response?.snapshot?.resonantContext;
-      if (ctx) {
-        const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-        el("aw-richness", `${ctx.richness ?? 0}%`);
-        el("aw-sections", `${(ctx.visibleSections || []).length}`);
-        el("aw-dwell", ctx.activeDwellSection?.label ?? "none");
-        el("aw-plugin", ctx.domainPlugin ?? "generic");
-      }
-    } catch {}
-  });
-}
+const openShieldTab = makeSidecarOpener("shield-tab.html");
+const openArchiveTab = makeSidecarOpener("archive-tab.html");
+const openAwarenessTab = makeSidecarOpener("awareness-tab.html");
+
+if (openShieldBtn) openShieldBtn.addEventListener("click", () => void openShieldTab());
+if (openArchiveBtn) openArchiveBtn.addEventListener("click", () => void openArchiveTab());
+if (openAwarenessBtn) openAwarenessBtn.addEventListener("click", () => void openAwarenessTab());
 
 // === Copy mobile URL ===
 if (copyMobileUrl) {

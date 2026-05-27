@@ -11,9 +11,6 @@
     <!-- Bridge offline/online status banner (OURS) -->
     <div id="bridge-banner" class="bridge-banner" hidden aria-live="assertive"></div>
 
-    <!-- Wallet status banner (OURS) -->
-    <div id="wallet-banner" class="wallet-banner" hidden aria-live="polite"></div>
-
     <main class="chat-shell" aria-label="Augmentor chat">
       <!-- Panel header with title + theme + settings (OURS) -->
       <header class="panel-header">
@@ -133,93 +130,20 @@
       </form>
     </main>
 
-    <!-- Side panels container — DAO panels (OURS, collapsible) -->
+    <!-- Side panels container — nav buttons (open as sidecar tabs) -->
     <div class="side-panels-container">
-      <details class="panel-section" id="wallet-section">
-        <summary class="panel-section-summary">◈ Wallet</summary>
-        <div class="panel-section-body" id="wallet-body">
-          <p class="panel-section-placeholder">Detecting Phantom wallet…</p>
-        </div>
-      </details>
-
-      <details class="panel-section" id="tribes-section">
-        <summary class="panel-section-summary">◈ Tribes</summary>
-        <div class="panel-section-body" id="tribes-body">
-          <p class="panel-section-placeholder">Loading tribes…</p>
-        </div>
-      </details>
-
-      <details class="panel-section" id="bounties-section">
-        <summary class="panel-section-summary">◈ Bounties</summary>
-        <div class="panel-section-body" id="bounties-body">
-          <p class="panel-section-placeholder">Loading bounties…</p>
-        </div>
-      </details>
-
-      <details class="panel-section" id="governance-section">
-        <summary class="panel-section-summary">◈ Governance</summary>
-        <div class="panel-section-body" id="governance-body">
-          <p class="panel-section-placeholder">Loading proposals…</p>
-        </div>
-      </details>
-
-      <details class="panel-section" id="shield-section">
-        <summary class="panel-section-summary">◈ Shield</summary>
-        <div class="panel-section-body" id="shield-body">
-          <p class="panel-section-placeholder">Loading security events…</p>
-        </div>
-      </details>
-
       <div class="panel-section panel-section-link" id="store-section">
         <button type="button" class="panel-section-summary panel-nav-btn" id="open-store-tab">◈ Protocol Store</button>
       </div>
-
-      <details class="panel-section" id="archive-section">
-        <summary class="panel-section-summary">◈ Archive</summary>
-        <div class="panel-section-body" id="archive-body">
-          <div class="archive-search-row">
-            <input id="archive-search-input" type="search" class="archive-search" placeholder="Search Living Archive…" autocomplete="off" />
-            <button type="button" class="store-action-btn" id="archive-search-btn">Search</button>
-          </div>
-          <div id="archive-results" class="archive-results"></div>
-          <div class="archive-meta">
-            <div class="awareness-metric">
-              <span class="awareness-label">Wiki pages</span>
-              <span class="awareness-value" id="archive-wiki-pages">—</span>
-            </div>
-            <div class="awareness-metric">
-              <span class="awareness-label">Intakes</span>
-              <span class="awareness-value" id="archive-intakes">—</span>
-            </div>
-          </div>
-          <button type="button" class="store-action-btn" id="archive-quick-save">Quick Save Current Page</button>
-        </div>
-      </details>
-
-      <details class="panel-section" id="awareness-section">
-        <summary class="panel-section-summary">◈ R-Awareness</summary>
-        <div class="panel-section-body" id="awareness-body">
-          <div class="awareness-metrics">
-            <div class="awareness-metric">
-              <span class="awareness-label">Context richness</span>
-              <span class="awareness-value" id="aw-richness">—</span>
-            </div>
-            <div class="awareness-metric">
-              <span class="awareness-label">Visible sections</span>
-              <span class="awareness-value" id="aw-sections">—</span>
-            </div>
-            <div class="awareness-metric">
-              <span class="awareness-label">Active dwell</span>
-              <span class="awareness-value" id="aw-dwell">—</span>
-            </div>
-            <div class="awareness-metric">
-              <span class="awareness-label">Domain plugin</span>
-              <span class="awareness-value" id="aw-plugin">—</span>
-            </div>
-          </div>
-          <button type="button" class="store-action-btn" id="aw-refresh-btn">Refresh Context</button>
-        </div>
-      </details>
+      <div class="panel-section panel-section-link" id="shield-section">
+        <button type="button" class="panel-section-summary panel-nav-btn" id="open-shield-tab">◈ Shield</button>
+      </div>
+      <div class="panel-section panel-section-link" id="archive-section">
+        <button type="button" class="panel-section-summary panel-nav-btn" id="open-archive-tab">◈ Archive</button>
+      </div>
+      <div class="panel-section panel-section-link" id="awareness-section">
+        <button type="button" class="panel-section-summary panel-nav-btn" id="open-awareness-tab">◈ R-Awareness</button>
+      </div>
     </div>
 
     <!-- Settings overlay (OURS) -->
