@@ -761,9 +761,8 @@ welcomeCard.innerHTML = `
   <div class="welcome-icon">◈</div>
   <h2 class="welcome-title">Welcome to ResonantOS</h2>
   <p class="welcome-text">Augmentor is your AI copilot. It can read pages, control your browser, and answer questions about anything you're looking at.</p>
-  <p class="welcome-text">To get started, add an API key:</p>
-  <button type="button" class="welcome-settings-btn" id="welcome-open-settings">⚙ Open Settings</button>
-  <p class="welcome-hint">Need a free key? Get one at <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">console.groq.com</a> in 30 seconds.</p>
+  <p class="welcome-text">You're connected to ResonantOS Alpha. Just type a message below to start.</p>
+  <p class="welcome-hint">Try: "What can you do?" or visit any webpage and ask about it.</p>
 `;
 
 hydrateChatSettings().then(async () => {

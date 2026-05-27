@@ -91,6 +91,9 @@
           <button id="context-toggle" type="button" class="toolbar-button" title="Show browser context, site permissions, and jobs">Status</button>
           <!-- Extended model select (OURS — 7 providers) -->
           <select id="model-select" class="model-select" aria-label="Connected model">
+            <optgroup label="ResonantOS">
+              <option value="resonantos-alpha" selected>ResonantOS Alpha (Qwen 7B)</option>
+            </optgroup>
             <optgroup label="OpenAI">
               <option value="gpt-5.5">GPT 5.5</option>
               <option value="gpt-5.4-mini">GPT 5.4 Mini</option>
@@ -126,7 +129,7 @@
           <span id="context-meter" class="context-meter" title="Estimated browser context captured for this session.">0%</span>
           <button type="submit" class="send-button" aria-label="Send message">➜</button>
         </div>
-        <p id="connection-line" class="connection-line">Connected to MiniMax 2.7 · Ready</p>
+        <p id="connection-line" class="connection-line">Connected to ResonantOS Alpha · Ready</p>
       </form>
     </main>
 

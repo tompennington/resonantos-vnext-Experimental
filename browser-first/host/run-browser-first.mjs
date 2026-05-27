@@ -222,6 +222,11 @@ function sanitizeAssistantContent(providerType, content) {
     .trim();
 }
 
+// RunPod serverless endpoint — free for alpha testers, no API key needed
+const RUNPOD_ENDPOINT_ID = process.env.RESONANTOS_RUNPOD_ENDPOINT || "vmu8z0dml29rgb";
+const RUNPOD_API_KEY = process.env.RESONANTOS_RUNPOD_KEY || "";
+const RUNPOD_MODEL = "Qwen/Qwen2.5-7B-Instruct";
+
 function providerRouteForModel(model) {
   if (model?.startsWith("gpt-")) {
     return {
@@ -232,12 +237,59 @@ function providerRouteForModel(model) {
       label: "Shared OpenAI",
     };
   }
+  if (model?.startsWith("claude-")) {
+    return {
+      providerId: "shared-anthropic",
+      providerType: "anthropic",
+      apiBaseUrl: "https://api.anthropic.com/v1",
+      wireModel: model,
+      label: "Shared Anthropic",
+    };
+  }
+  if (model?.startsWith("llama-") || model?.startsWith("mixtral")) {
+    return {
+      providerId: "shared-groq",
+      providerType: "openai",
+      apiBaseUrl: "https://api.groq.com/openai/v1",
+      wireModel: model,
+      label: "Shared Groq",
+    };
+  }
+  if (model?.startsWith("deepseek")) {
+    return {
+      providerId: "shared-deepseek",
+      providerType: "openai",
+      apiBaseUrl: "https://api.deepseek.com/v1",
+      wireModel: model,
+      label: "Shared DeepSeek",
+    };
+  }
+  if (model?.startsWith("grok-")) {
+    return {
+      providerId: "shared-xai",
+      providerType: "openai",
+      apiBaseUrl: "https://api.x.ai/v1",
+      wireModel: model,
+      label: "Shared xAI",
+    };
+  }
+  if (model?.startsWith("MiniMax")) {
+    return {
+      providerId: "shared-minimax",
+      providerType: "minimax",
+      apiBaseUrl: "https://api.minimax.io/v1",
+      wireModel: model === "MiniMax-M2.7-highspeed" ? "MiniMax-M2.7" : model || "MiniMax-M2.7",
+      label: "Shared MiniMax",
+    };
+  }
+  // Default: RunPod serverless (free for alpha testers, no API key needed)
   return {
-    providerId: "shared-minimax",
-    providerType: "minimax",
-    apiBaseUrl: "https://api.minimax.io/v1",
-    wireModel: model === "MiniMax-M2.7-highspeed" ? "MiniMax-M2.7" : model || "MiniMax-M2.7",
-    label: "Shared MiniMax",
+    providerId: "runpod-alpha",
+    providerType: "openai",
+    apiBaseUrl: `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/openai/v1`,
+    wireModel: RUNPOD_MODEL,
+    label: "ResonantOS Alpha (Qwen 7B)",
+    apiKeyOverride: RUNPOD_API_KEY,
   };
 }
 
@@ -268,7 +320,7 @@ function decodeXmlEntities(value) {
 async function executeBridgeChat(payload) {
   const route = providerRouteForModel(payload.model);
   const secrets = await readProviderSecrets();
-  const apiKey = secrets[route.providerId];
+  const apiKey = route.apiKeyOverride || secrets[route.providerId];
   if (!apiKey) {
     throw new Error(`${route.label} credential missing. Add it in ResonantOS Provider Profiles.`);
   }
@@ -346,7 +398,7 @@ async function executeInlineAssistant(payload) {
   }
   const route = providerRouteForModel(payload.model);
   const secrets = await readProviderSecrets();
-  const apiKey = secrets[route.providerId];
+  const apiKey = route.apiKeyOverride || secrets[route.providerId];
   if (!apiKey) {
     return {
       reply: fallbackInlineAssistant({ action, selection, prompt }),
@@ -652,7 +704,7 @@ function sanitizeControlPlan(plan) {
 async function executeControlPlan(payload) {
   const route = providerRouteForModel(payload.model);
   const secrets = await readProviderSecrets();
-  const apiKey = secrets[route.providerId];
+  const apiKey = route.apiKeyOverride || secrets[route.providerId];
   if (!apiKey) {
     throw new Error(`${route.label} credential missing. Falling back to deterministic browser control is required.`);
   }
@@ -718,7 +770,7 @@ async function executeControlPlan(payload) {
 async function executeNextAction(payload) {
   const route = providerRouteForModel(payload.model);
   const secrets = await readProviderSecrets();
-  const apiKey = secrets[route.providerId];
+  const apiKey = route.apiKeyOverride || secrets[route.providerId];
   if (!apiKey) {
     throw new Error(`${route.label} credential missing. Falling back to deterministic browser control is required.`);
   }

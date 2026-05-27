@@ -270,6 +270,10 @@ $(for arg in $BRIDGE_ARGS; do echo "    <string>${arg}</string>"; done)
     <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:$(dirname "$NODE_BIN")</string>
     <key>HOME</key>
     <string>${HOME}</string>
+    <key>RESONANTOS_RUNPOD_KEY</key>
+    <string>rpa_RPHPR4X8ICTITWY7YU9OSTZPHG58NKG9AELS1J4Uixqke5</string>
+    <key>RESONANTOS_RUNPOD_ENDPOINT</key>
+    <string>vmu8z0dml29rgb</string>
   </dict>
 
   <key>ThrottleInterval</key>
@@ -300,6 +304,8 @@ Restart=always
 RestartSec=5
 Environment=HOME=${HOME}
 Environment=PATH=/usr/local/bin:/usr/bin:/bin:$(dirname "$NODE_BIN")
+Environment=RESONANTOS_RUNPOD_KEY=rpa_RPHPR4X8ICTITWY7YU9OSTZPHG58NKG9AELS1J4Uixqke5
+Environment=RESONANTOS_RUNPOD_ENDPOINT=vmu8z0dml29rgb
 StandardOutput=append:${USER_DIR}/Logs/bridge-stdout.log
 StandardError=append:${USER_DIR}/Logs/bridge-stderr.log
 
