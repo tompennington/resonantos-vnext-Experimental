@@ -359,7 +359,7 @@ async function executeBridgeChat(payload) {
     body: JSON.stringify({
       model: route.wireModel,
       messages: requestMessages,
-      ...(route.providerType === "openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal" } : {}),
+      ...(route.providerId === "shared-openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal" } : {}),
     }),
   });
   const responsePayload = await response.json().catch(() => ({}));
@@ -430,7 +430,7 @@ async function executeInlineAssistant(payload) {
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      ...(route.providerType === "openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal" } : {}),
+      ...(route.providerId === "shared-openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal" } : {}),
     }),
   });
   const responsePayload = await response.json().catch(() => ({}));
@@ -749,7 +749,7 @@ async function executeControlPlan(payload) {
         { role: "system", content: plannerPrompt },
         { role: "user", content: userPrompt },
       ],
-      ...(route.providerType === "openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal", response_format: { type: "json_object" } } : {}),
+      ...(route.providerId === "shared-openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal" } : {}), response_format: { type: "json_object" },
     }),
   });
   const responsePayload = await response.json().catch(() => ({}));
@@ -826,7 +826,7 @@ async function executeNextAction(payload) {
         { role: "system", content: nextActionPrompt },
         { role: "user", content: userPrompt },
       ],
-      ...(route.providerType === "openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal", response_format: { type: "json_object" } } : {}),
+      ...(route.providerId === "shared-openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal" } : {}), response_format: { type: "json_object" },
     }),
   });
   const responsePayload = await response.json().catch(() => ({}));
