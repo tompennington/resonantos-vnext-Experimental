@@ -183,14 +183,28 @@ function drawShapes(canvas, shapes) {
     delay += STEP;
   });
 
-  // If no shapes, draw a placeholder message
+  // If no shapes, draw welcome smiley
   if (!shapes.length) {
-    ctx.fillStyle = "rgba(36, 209, 143, 0.12)";
-    ctx.font = "16px ui-sans-serif, system-ui, sans-serif";
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2 - 30;
+    const r = Math.min(canvas.width, canvas.height) * 0.22;
+    ctx.strokeStyle = "#14F195";
+    ctx.fillStyle = "#14F195";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    // Face circle
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    // Left eye
+    ctx.beginPath(); ctx.arc(cx - r * 0.3, cy - r * 0.2, r * 0.08, 0, Math.PI * 2); ctx.fill();
+    // Right eye
+    ctx.beginPath(); ctx.arc(cx + r * 0.3, cy - r * 0.2, r * 0.08, 0, Math.PI * 2); ctx.fill();
+    // Smile arc
+    ctx.beginPath(); ctx.arc(cx, cy + r * 0.05, r * 0.45, 0.15 * Math.PI, 0.85 * Math.PI); ctx.lineWidth = 2.5; ctx.stroke();
+    // Welcome text
+    ctx.font = `${Math.max(18, r * 0.22)}px ui-sans-serif, system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "rgba(143, 159, 149, 0.5)";
-    ctx.fillText("Canvas ready — Augmentor will draw here", canvas.width / 2, canvas.height / 2);
+    ctx.fillText("Welcome to ResonantOS!", cx, cy + r + 40);
   }
 }
 
