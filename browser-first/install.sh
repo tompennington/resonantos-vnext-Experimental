@@ -270,9 +270,8 @@ $(for arg in $BRIDGE_ARGS; do echo "    <string>${arg}</string>"; done)
     <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:$(dirname "$NODE_BIN")</string>
     <key>HOME</key>
     <string>${HOME}</string>
-    <key>RESONANTOS_RUNPOD_KEY</key>
-    <string>rpa_RPHPR4X8ICTITWY7YU9OSTZPHG58NKG9AELS1J4Uixqke5</string>
-    <key>RESONANTOS_RUNPOD_ENDPOINT</key>
+    <key>RESONANTOS_ALPHA_KEY</key>
+    <string>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</string>
     <string>wxh8kojxcius0e</string>
   </dict>
 
@@ -304,8 +303,7 @@ Restart=always
 RestartSec=5
 Environment=HOME=${HOME}
 Environment=PATH=/usr/local/bin:/usr/bin:/bin:$(dirname "$NODE_BIN")
-Environment=RESONANTOS_RUNPOD_KEY=rpa_RPHPR4X8ICTITWY7YU9OSTZPHG58NKG9AELS1J4Uixqke5
-Environment=RESONANTOS_RUNPOD_ENDPOINT=wxh8kojxcius0e
+Environment=RESONANTOS_ALPHA_KEY=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
 StandardOutput=append:${USER_DIR}/Logs/bridge-stdout.log
 StandardError=append:${USER_DIR}/Logs/bridge-stderr.log
 

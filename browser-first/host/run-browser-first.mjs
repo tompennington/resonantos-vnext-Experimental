@@ -222,10 +222,9 @@ function sanitizeAssistantContent(providerType, content) {
     .trim();
 }
 
-// RunPod serverless endpoint — free for alpha testers, no API key needed
-const RUNPOD_ENDPOINT_ID = process.env.RESONANTOS_RUNPOD_ENDPOINT || "wxh8kojxcius0e";
-const RUNPOD_API_KEY = process.env.RESONANTOS_RUNPOD_KEY || "";
-const RUNPOD_MODEL = "Qwen/Qwen2.5-7B-Instruct";
+// Default provider for alpha testers — no API key needed from user
+const ALPHA_PROVIDER_KEY = process.env.RESONANTOS_ALPHA_KEY || "";
+const ALPHA_MODEL = "llama-3.3-70b-versatile";
 
 function providerRouteForModel(model) {
   if (model?.startsWith("gpt-")) {
@@ -282,14 +281,14 @@ function providerRouteForModel(model) {
       label: "Shared MiniMax",
     };
   }
-  // Default: RunPod serverless (free for alpha testers, no API key needed)
+  // Default: Groq free tier (alpha testers, no API key needed from user)
   return {
-    providerId: "runpod-alpha",
+    providerId: "alpha-groq",
     providerType: "openai",
-    apiBaseUrl: `https://api.runpod.ai/v2/${RUNPOD_ENDPOINT_ID}/openai/v1`,
-    wireModel: RUNPOD_MODEL,
-    label: "ResonantOS Alpha (Qwen 7B)",
-    apiKeyOverride: RUNPOD_API_KEY,
+    apiBaseUrl: "https://api.groq.com/openai/v1",
+    wireModel: ALPHA_MODEL,
+    label: "ResonantOS Alpha (Llama 70B)",
+    apiKeyOverride: ALPHA_PROVIDER_KEY,
   };
 }
 
