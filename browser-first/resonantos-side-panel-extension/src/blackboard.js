@@ -46,16 +46,18 @@ if (sendToAugmentorBtn) {
   sendToAugmentorBtn.addEventListener("click", () => sendBlackboardToAugmentor());
 }
 
-// ── Message listener (from background.js relay) ────────────────────────────────
+// ── Auto-show welcome smiley after a brief delay ─────────────────────────────
+setTimeout(() => { if (currentMode === "welcome") handleCommand("draw", { shapes: [] }); }, 800);
 
+// ── Message listener (from background.js relay) ────────────────────────────────
+try {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Only accept from the extension itself
   if (sender.id !== chrome.runtime.id) return;
   if (!message || message.channel !== "resonantos.blackboard") return;
-
   handleCommand(message.command, message.payload ?? {});
   sendResponse({ ok: true });
 });
+} catch (_) { /* chrome.runtime unavailable outside extension context */ }
 
 // ── Main command dispatcher ───────────────────────────────────────────────────
 
