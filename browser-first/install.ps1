@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 # ResonantOS Installer for Windows
 # PowerShell 5.1+ (built into Windows 10/11)
 # No admin/elevated privileges required - uses HKCU, user dirs, Task Scheduler
@@ -8,27 +8,27 @@
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File install.ps1
 #   - or via install.bat double-click -
-# ═══════════════════════════════════════════════════════════════════════════════
+# ===============================================================================
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# ── Colors & Helpers ───────────────────────────────────────────────────────────
+# -- Colors & Helpers -----------------------------------------------------------
 function Write-Banner {
     Write-Host ""
-    Write-Host "╔══════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║     ResonantOS Installer for Windows          ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "+==============================================+" -ForegroundColor Cyan
+    Write-Host "|     ResonantOS Installer for Windows          |" -ForegroundColor Cyan
+    Write-Host "+==============================================+" -ForegroundColor Cyan
     Write-Host ""
 }
 
-function Write-Step   { param($msg) Write-Host "`n▶ $msg" -ForegroundColor Blue }
-function Write-Ok     { param($msg) Write-Host "✔ $msg" -ForegroundColor Green }
-function Write-Info   { param($msg) Write-Host "ℹ $msg" -ForegroundColor Cyan }
-function Write-Warn   { param($msg) Write-Host "⚠ $msg" -ForegroundColor Yellow }
-function Write-Err    { param($msg) Write-Host "✖ $msg" -ForegroundColor Red }
+function Write-Step   { param($msg) Write-Host "`n> $msg" -ForegroundColor Blue }
+function Write-Ok     { param($msg) Write-Host "[OK] $msg" -ForegroundColor Green }
+function Write-Info   { param($msg) Write-Host "[INFO] $msg" -ForegroundColor Cyan }
+function Write-Warn   { param($msg) Write-Host "[WARN] $msg" -ForegroundColor Yellow }
+function Write-Err    { param($msg) Write-Host "[ERROR] $msg" -ForegroundColor Red }
 
-# ── Constants ──────────────────────────────────────────────────────────────────
+# -- Constants ------------------------------------------------------------------
 $REPO_URL    = "https://github.com/tompennington/resonantos-vnext-Experimental.git"
 $BRANCH      = "tom/browser-first-merged"
 $REPO_DIR    = Join-Path $env:USERPROFILE "resonantos-vnext"
@@ -36,13 +36,13 @@ $USER_DIR    = Join-Path $env:USERPROFILE "ResonantOS_User"
 $BRIDGE_PORT = 47773
 $TASK_NAME   = "ResonantOS Bridge"
 
-# ── Step 1: Banner ─────────────────────────────────────────────────────────────
+# -- Step 1: Banner -------------------------------------------------------------
 Write-Banner
 Write-Info "Windows 10 21H2+ / Windows 11 supported"
 Write-Info "No administrator privileges required"
 Write-Host ""
 
-# ── Step 2: Check / Install Node.js ───────────────────────────────────────────
+# -- Step 2: Check / Install Node.js -------------------------------------------
 Write-Step "Checking Node.js (>= 18 required)"
 
 $nodeOk = $false
@@ -99,7 +99,7 @@ if (-not $nodeOk) {
     }
 }
 
-# ── Step 3: Check / Install Git ────────────────────────────────────────────────
+# -- Step 3: Check / Install Git ------------------------------------------------
 Write-Step "Checking Git"
 
 $gitOk = $false
@@ -143,7 +143,7 @@ if (-not $gitOk) {
     }
 }
 
-# ── Step 4: Clone or update repo ───────────────────────────────────────────────
+# -- Step 4: Clone or update repo -----------------------------------------------
 Write-Step "Setting up ResonantOS repository"
 
 if (-not (Test-Path $REPO_DIR)) {
@@ -185,7 +185,7 @@ if (Test-Path $pkgJson) {
     }
 }
 
-# ── Step 5: Create directory structure ─────────────────────────────────────────
+# -- Step 5: Create directory structure -----------------------------------------
 Write-Step "Creating ResonantOS user directory structure"
 
 $dirs = @(
@@ -209,7 +209,7 @@ foreach ($dir in $dirs) {
     }
 }
 
-# ── Step 6: Create provider-secrets.json template ──────────────────────────────
+# -- Step 6: Create provider-secrets.json template ------------------------------
 Write-Step "Checking provider secrets template"
 
 $secretsFile = "$USER_DIR\Secrets\provider-secrets.json"
@@ -229,7 +229,7 @@ if (-not (Test-Path $secretsFile)) {
     Write-Info "provider-secrets.json already exists - not overwritten"
 }
 
-# ── Step 7: Install bridge as Windows Task Scheduler task ──────────────────────
+# -- Step 7: Install bridge as Windows Task Scheduler task ----------------------
 Write-Step "Registering ResonantOS Bridge as a scheduled task"
 
 $bridgeDaemon = Join-Path $REPO_DIR "browser-first\host\run-browser-first.mjs"
@@ -319,7 +319,7 @@ if (-not $bridgeOk) {
     Write-Info "  Invoke-RestMethod http://127.0.0.1:$BRIDGE_PORT/status"
 }
 
-# ── Step 8: Install native messaging host ──────────────────────────────────────
+# -- Step 8: Install native messaging host --------------------------------------
 Write-Step "Installing native messaging host"
 
 $nativeScript = Join-Path $REPO_DIR "browser-first\native-messaging\install-native-host.ps1"
@@ -336,7 +336,7 @@ if (Test-Path $nativeScript) {
     Write-Info "Run browser-first\native-messaging\install-native-host.ps1 separately"
 }
 
-# ── Step 9: Detect browsers ────────────────────────────────────────────────────
+# -- Step 9: Detect browsers ----------------------------------------------------
 Write-Step "Detecting installed browsers"
 
 $chromePath = "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
@@ -373,11 +373,11 @@ if (-not $detectedBrowser) {
     Write-Info "Install Brave:  https://brave.com/download/"
 }
 
-# ── Step 10: Final instructions ────────────────────────────────────────────────
+# -- Step 10: Final instructions ------------------------------------------------
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "===========================================================" -ForegroundColor Cyan
 Write-Host " ResonantOS Installation Complete!" -ForegroundColor Green
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "===========================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host " Repository:   $REPO_DIR" -ForegroundColor White
 Write-Host " User data:    $USER_DIR" -ForegroundColor White
@@ -389,9 +389,9 @@ Write-Host "  1. Add your API keys to:" -ForegroundColor White
 Write-Host "     $USER_DIR\Secrets\provider-secrets.json" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  2. Load the extension in your browser:" -ForegroundColor White
-Write-Host "     • Chrome/Brave: chrome://extensions → Enable Developer mode" -ForegroundColor Cyan
-Write-Host "     • Click 'Load unpacked'" -ForegroundColor Cyan
-Write-Host "     • Select: $REPO_DIR\browser-first\resonantos-side-panel-extension" -ForegroundColor Cyan
+Write-Host "     - Chrome/Brave: chrome://extensions -> Enable Developer mode" -ForegroundColor Cyan
+Write-Host "     - Click 'Load unpacked'" -ForegroundColor Cyan
+Write-Host "     - Select: $REPO_DIR\browser-first\resonantos-side-panel-extension" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  3. Or launch with extension pre-loaded (Windows launcher):" -ForegroundColor White
 Write-Host "     $REPO_DIR\browser-first\host\run-browser-first.ps1" -ForegroundColor Cyan
@@ -403,9 +403,9 @@ Write-Host "  5. To uninstall:" -ForegroundColor White
 Write-Host "     $REPO_DIR\browser-first\uninstall.ps1" -ForegroundColor Cyan
 Write-Host ""
 
-# ── Step 11: Offer to launch browser ──────────────────────────────────────────
+# -- Step 11: Offer to launch browser ------------------------------------------
 if ($detectedBrowser) {
-    Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "===========================================================" -ForegroundColor Cyan
     $launch = Read-Host "Launch $detectedBrowser with ResonantOS extension now? (Y/N)"
     if ($launch -match "^[Yy]") {
         $launchScript = Join-Path $REPO_DIR "browser-first\host\run-browser-first.ps1"
