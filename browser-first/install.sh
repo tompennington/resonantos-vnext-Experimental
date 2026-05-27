@@ -417,33 +417,52 @@ echo ""
 echo -e "  ${BOLD}Or launch with everything pre-loaded:${RESET}"
 echo "    node ${LAUNCHER}"
 echo ""
+# -- Step 8: Launch browser with extension loaded --------------------------------
+step "Launching ResonantOS"
 
-# ── Step 8: Offer to launch browser ───────────────────────────────────────────
-# Only prompt if we're running interactively (not piped from curl)
-if [ -t 0 ]; then
-  echo -e "${BOLD}Launch browser with ResonantOS now?${RESET} [Y/n] "
-  read -r LAUNCH_ANSWER </dev/tty
-  LAUNCH_ANSWER="${LAUNCH_ANSWER:-Y}"
+launch_browser() {
+  local browser_bin="$1"
+  local browser_name="$2"
+  local ext_path="$EXTENSION_DIR"
+  local profile_dir="$USER_DIR/BrowserFirst/Profiles/main"
+  mkdir -p "$profile_dir"
 
-  if [[ "$LAUNCH_ANSWER" =~ ^[Yy]$ ]]; then
-    if [ -f "$LAUNCHER" ]; then
-      info "Launching ResonantOS browser..."
-      node "$LAUNCHER" &
-      disown
-      ok "Browser launched! (running in background)"
+  local launch_args=(
+    "--load-extension=${ext_path}"
+    "--user-data-dir=${profile_dir}"
+    "--no-first-run"
+    "--disable-default-apps"
+  )
+
+  if [ "$OS_TYPE" = "macos" ]; then
+    open -a "$browser_bin" --args "${launch_args[@]}" &
+  else
+    "$browser_bin" "${launch_args[@]}" &
+  fi
+  disown 2>/dev/null
+  ok "${browser_name} launched with ResonantOS extension loaded!"
+  info "Press Alt+Shift+A to open the side panel if it doesn't open automatically."
+}
+
+if [ -n "$BROWSER_FOUND" ]; then
+  if [ -t 0 ]; then
+    echo -e "${BOLD}Launch ${BROWSER_NAME} with ResonantOS now?${RESET} [Y/n] "
+    read -r LAUNCH_ANSWER </dev/tty
+    LAUNCH_ANSWER="${LAUNCH_ANSWER:-Y}"
+    if [[ "$LAUNCH_ANSWER" =~ ^[Yy]$ ]]; then
+      launch_browser "$BROWSER_FOUND" "$BROWSER_NAME"
     else
-      err "Launcher not found at ${LAUNCHER}"
-      info "Run manually: node ${LAUNCHER}"
+      info "Skipping launch. Open ${BROWSER_NAME} -> chrome://extensions -> Load unpacked -> ${EXTENSION_DIR}"
     fi
   else
-    info "Skipping browser launch. Run manually when ready:"
-    echo "  node ${LAUNCHER}"
+    # Non-interactive (piped from curl) -- launch automatically
+    launch_browser "$BROWSER_FOUND" "$BROWSER_NAME"
   fi
 else
-  echo -e "${CYAN}ℹ️  To launch browser:${RESET}"
-  echo "  node ${LAUNCHER}"
+  warn "No browser found. Install Chrome or Brave, then load the extension manually."
+  info "  chrome://extensions -> Developer mode -> Load unpacked -> ${EXTENSION_DIR}"
 fi
 
 echo ""
-echo -e "${BOLD}${CYAN}ResonantOS is ready. Good luck out there. 🚀${RESET}"
+echo -e "${BOLD}${CYAN}ResonantOS is ready. Welcome aboard.${RESET}"
 echo ""
