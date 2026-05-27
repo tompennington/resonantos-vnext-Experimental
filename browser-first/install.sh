@@ -23,7 +23,7 @@ warn() { echo -e "${YELLOW}⚠️  ${1}${RESET}"; }
 err()  { echo -e "${RED}❌ ${1}${RESET}" >&2; }
 step() { echo -e "\n${BOLD}${BLUE}▶ ${1}${RESET}"; }
 
-REPO_URL="https://github.com/ResonantOS/resonantos-vnext.git"
+REPO_URL="https://github.com/tompennington/resonantos-vnext-Experimental.git"
 BRANCH="tom/browser-first-merged"
 REPO_DIR="$HOME/resonantos-vnext"
 USER_DIR="$HOME/ResonantOS_User"
@@ -85,7 +85,7 @@ for candidate in node /opt/homebrew/bin/node /usr/local/bin/node ~/.local/bin/no
   if command -v "$candidate" &>/dev/null 2>&1; then
     NODE_VER=$("$candidate" --version 2>/dev/null | sed 's/v//')
     NODE_MAJOR=$(echo "$NODE_VER" | cut -d. -f1)
-    if [ "$NODE_MAJOR" -ge 18 ] 2>/dev/null; then
+    if [ "$NODE_MAJOR" -ge 22 ] 2>/dev/null; then
       NODE_OK=true
       NODE_BIN=$(command -v "$candidate")
       ok "Node.js v${NODE_VER} found at ${NODE_BIN}"
