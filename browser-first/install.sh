@@ -24,7 +24,7 @@ err()  { echo -e "${RED}❌ ${1}${RESET}" >&2; }
 step() { echo -e "\n${BOLD}${BLUE}▶ ${1}${RESET}"; }
 
 REPO_URL="https://github.com/ResonantOS/resonantos-vnext.git"
-BRANCH="browser-first-preview"
+BRANCH="tom/browser-first-merged"
 REPO_DIR="$HOME/resonantos-vnext"
 USER_DIR="$HOME/ResonantOS_User"
 BRIDGE_PORT=47773
@@ -75,7 +75,7 @@ case "$(uname -s)" in
 esac
 
 # ── Step 2: Check / Install Node.js ──────────────────────────────────────────
-step "Checking Node.js (>= 18 required)"
+step "Checking Node.js (>= 22 required)"
 
 NODE_OK=false
 NODE_BIN=""
@@ -91,7 +91,7 @@ for candidate in node /opt/homebrew/bin/node /usr/local/bin/node ~/.local/bin/no
       ok "Node.js v${NODE_VER} found at ${NODE_BIN}"
       break
     else
-      warn "Node.js v${NODE_VER} is too old (need ≥ 18)"
+      warn "Node.js v${NODE_VER} is too old (need ≥ 22)"
     fi
   fi
 done
@@ -132,20 +132,20 @@ if [ "$NODE_OK" = false ]; then
     }
 
     if is_debian_like; then
-      info "Installing Node.js 20 via NodeSource (Ubuntu/Debian)..."
+      info "Installing Node.js 22 via NodeSource (Ubuntu/Debian)..."
       echo "This requires sudo. You may be prompted for your password."
-      curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+      curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
       sudo apt-get install -y nodejs
     elif is_rhel_like; then
-      info "Installing Node.js 20 via NodeSource (Fedora/RHEL)..."
+      info "Installing Node.js 22 via NodeSource (Fedora/RHEL)..."
       echo "This requires sudo. You may be prompted for your password."
-      curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+      curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
       sudo dnf install -y nodejs || sudo yum install -y nodejs
     else
       warn "Unknown Linux distro. Attempting NodeSource generic install..."
-      curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - || true
+      curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - || true
       sudo apt-get install -y nodejs 2>/dev/null || \
-        { err "Could not auto-install Node.js. Please install Node.js 20+ manually from https://nodejs.org"; exit 1; }
+        { err "Could not auto-install Node.js. Please install Node.js 22+ manually from https://nodejs.org"; exit 1; }
     fi
   fi
 
@@ -155,7 +155,7 @@ if [ "$NODE_OK" = false ]; then
     NODE_VER=$(node --version | sed 's/v//')
     ok "Node.js v${NODE_VER} installed at ${NODE_BIN}"
   else
-    err "Node.js installation failed. Please install Node.js 20+ manually from https://nodejs.org"
+    err "Node.js installation failed. Please install Node.js 22+ manually from https://nodejs.org"
     exit 1
   fi
 fi
@@ -236,7 +236,7 @@ if [ "$OS_TYPE" = "macos" ]; then
   <key>ProgramArguments</key>
   <array>
     <string>${NODE_BIN}</string>
-    <string>bridge-daemon.mjs</string>
+    <string>run-browser-first.mjs</string>
   </array>
 
   <key>WorkingDirectory</key>
@@ -285,7 +285,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=${BRIDGE_DIR}
-ExecStart=${NODE_BIN} bridge-daemon.mjs
+ExecStart=${NODE_BIN} run-browser-first.mjs
 Restart=always
 RestartSec=5
 Environment=HOME=${HOME}
@@ -379,7 +379,7 @@ fi
 
 # ── Step 7: Final instructions ────────────────────────────────────────────────
 EXTENSION_DIR="$REPO_DIR/browser-first/resonantos-side-panel-extension"
-LAUNCHER="$REPO_DIR/browser-first/host/run-brave-first.mjs"
+LAUNCHER="$REPO_DIR/browser-first/host/run-browser-first.mjs"
 
 echo ""
 echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════════╗${RESET}"
