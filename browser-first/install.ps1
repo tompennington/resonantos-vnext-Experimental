@@ -2,12 +2,12 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # ResonantOS Installer for Windows
 # PowerShell 5.1+ (built into Windows 10/11)
-# No admin/elevated privileges required — uses HKCU, user dirs, Task Scheduler
-# Idempotent — safe to run multiple times
+# No admin/elevated privileges required - uses HKCU, user dirs, Task Scheduler
+# Idempotent - safe to run multiple times
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File install.ps1
-#   — or via install.bat double-click —
+#   - or via install.bat double-click -
 # ═══════════════════════════════════════════════════════════════════════════════
 
 Set-StrictMode -Version Latest
@@ -155,12 +155,12 @@ if (-not (Test-Path $REPO_DIR)) {
     }
     Write-Ok "Repository cloned"
 } else {
-    Write-Info "Repository already exists — pulling latest changes..."
+    Write-Info "Repository already exists - pulling latest changes..."
     Push-Location $REPO_DIR
     try {
         & git pull
         if ($LASTEXITCODE -ne 0) {
-            Write-Warn "git pull failed (may be offline — continuing with local copy)"
+            Write-Warn "git pull failed (may be offline - continuing with local copy)"
         } else {
             Write-Ok "Repository updated"
         }
@@ -226,7 +226,7 @@ if (-not (Test-Path $secretsFile)) {
     Write-Ok "Created provider-secrets.json template"
     Write-Info "Edit $secretsFile to add your API keys"
 } else {
-    Write-Info "provider-secrets.json already exists — not overwritten"
+    Write-Info "provider-secrets.json already exists - not overwritten"
 }
 
 # ── Step 7: Install bridge as Windows Task Scheduler task ──────────────────────
@@ -239,7 +239,7 @@ $workingDir   = Join-Path $REPO_DIR "browser-first\host"
 # Find node.exe path
 $nodePath = (Get-Command node -ErrorAction SilentlyContinue).Source
 if (-not $nodePath) {
-    Write-Err "node.exe not found in PATH — cannot register scheduled task"
+    Write-Err "node.exe not found in PATH - cannot register scheduled task"
     exit 1
 }
 
@@ -263,7 +263,7 @@ try {
                     -DontStopIfGoingOnBatteries `
                     -RestartCount 3 `
                     -RestartInterval (New-TimeSpan -Minutes 1) `
-                    -ExecutionTimeLimit (New-TimeSpan -Hours 0)  # No timeout — run forever
+                    -ExecutionTimeLimit (New-TimeSpan -Hours 0)  # No timeout - run forever
 
     $principal = New-ScheduledTaskPrincipal `
                     -UserId ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) `
@@ -276,7 +276,7 @@ try {
         -Trigger    $trigger `
         -Settings   $settings `
         -Principal  $principal `
-        -Description "ResonantOS AI bridge server — auto-starts on login" | Out-Null
+        -Description "ResonantOS AI bridge server - auto-starts on login" | Out-Null
 
     Write-Ok "Scheduled task '$TASK_NAME' registered (starts at logon)"
 } catch {
@@ -309,7 +309,7 @@ while (-not $bridgeOk -and $attempts -lt $maxTries) {
         Write-Ok "Bridge is online! Status: $($response | ConvertTo-Json -Compress)"
         $bridgeOk = $true
     } catch {
-        Write-Info "Attempt $attempts/$maxTries — waiting..."
+        Write-Info "Attempt $attempts/$maxTries - waiting..."
     }
 }
 
@@ -332,7 +332,7 @@ if (Test-Path $nativeScript) {
         Write-Info "Run manually: $nativeScript"
     }
 } else {
-    Write-Warn "Native messaging install script not found — skipping"
+    Write-Warn "Native messaging install script not found - skipping"
     Write-Info "Run browser-first\native-messaging\install-native-host.ps1 separately"
 }
 
@@ -428,5 +428,5 @@ if ($detectedBrowser) {
 }
 
 Write-Host ""
-Write-Host " ResonantOS is ready. 🚀" -ForegroundColor Green
+Write-Host " ResonantOS is ready. *" -ForegroundColor Green
 Write-Host ""
