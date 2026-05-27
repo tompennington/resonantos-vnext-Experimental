@@ -223,7 +223,7 @@ function sanitizeAssistantContent(providerType, content) {
 }
 
 // RunPod serverless endpoint — free for alpha testers, no API key needed
-const RUNPOD_ENDPOINT_ID = process.env.RESONANTOS_RUNPOD_ENDPOINT || "vmu8z0dml29rgb";
+const RUNPOD_ENDPOINT_ID = process.env.RESONANTOS_RUNPOD_ENDPOINT || "wxh8kojxcius0e";
 const RUNPOD_API_KEY = process.env.RESONANTOS_RUNPOD_KEY || "";
 const RUNPOD_MODEL = "Qwen/Qwen2.5-7B-Instruct";
 
