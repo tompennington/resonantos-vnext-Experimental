@@ -777,6 +777,34 @@ hydrateChatSettings().then(async () => {
       welcomeBtn.addEventListener("click", () => settingsToggleBtn.click());
     }
     commandForm.addEventListener("submit", () => { welcomeCard.remove(); }, { once: true });
+
+    // First-run: open Blackboard with a smiley face welcome
+    const bbUrl = chrome.runtime.getURL("src/blackboard.html");
+    const bbTab = await chrome.tabs.create({ url: bbUrl, active: false });
+    // Give blackboard a moment to load, then send the smiley
+    setTimeout(() => {
+      chrome.runtime.sendMessage({
+        channel: "resonantos.blackboard.relay",
+        payload: {
+          channel: "resonantos.blackboard",
+          command: "draw",
+          payload: {
+            shapes: [
+              // Face (big circle)
+              { type: "circle", x: 400, y: 250, w: 280, h: 280, color: "#14F195", width: 4 },
+              // Left eye
+              { type: "circle", x: 355, y: 215, w: 36, h: 36, color: "#14F195", fill: true },
+              // Right eye
+              { type: "circle", x: 445, y: 215, w: 36, h: 36, color: "#14F195", fill: true },
+              // Smile (arc approximated with a wide ellipse bottom half)
+              { type: "circle", x: 400, y: 265, w: 140, h: 80, color: "#14F195", width: 3 },
+              // Welcome text label
+              { type: "rect", x: 260, y: 420, w: 280, h: 0, color: "#14F195", label: "😀 Welcome to ResonantOS!" },
+            ]
+          }
+        }
+      });
+    }, 1500);
   }
 }).catch((error) => {
   setStatus("Context failed");
