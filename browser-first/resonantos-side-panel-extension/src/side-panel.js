@@ -754,9 +754,30 @@ commandForm.addEventListener("submit", async (event) => {
   }
 });
 
+// === Welcome card (first-run onboarding) ===
+const welcomeCard = document.createElement("div");
+welcomeCard.className = "welcome-card";
+welcomeCard.innerHTML = `
+  <div class="welcome-icon">◈</div>
+  <h2 class="welcome-title">Welcome to ResonantOS</h2>
+  <p class="welcome-text">Augmentor is your AI copilot. It can read pages, control your browser, and answer questions about anything you're looking at.</p>
+  <p class="welcome-text">To get started, add an API key:</p>
+  <button type="button" class="welcome-settings-btn" id="welcome-open-settings">⚙ Open Settings</button>
+  <p class="welcome-hint">Need a free key? Get one at <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">console.groq.com</a> in 30 seconds.</p>
+`;
+
 hydrateChatSettings().then(async () => {
   await loadBrowserJobs();
   await tabContextController.hydrateInitialContext();
+  // Show welcome card if no existing messages
+  if (chatSessionStore.getMessages().length === 0 && transcript) {
+    transcript.prepend(welcomeCard);
+    const welcomeBtn = document.getElementById("welcome-open-settings");
+    if (welcomeBtn && settingsToggleBtn) {
+      welcomeBtn.addEventListener("click", () => settingsToggleBtn.click());
+    }
+    commandForm.addEventListener("submit", () => { welcomeCard.remove(); }, { once: true });
+  }
 }).catch((error) => {
   setStatus("Context failed");
   void addMessage("system", `I could not read the active tab context: ${String(error)}`);

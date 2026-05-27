@@ -3335,3 +3335,60 @@ textarea::placeholder {
 .awareness-card { padding: 16px; background: var(--card-bg, #1a1a1a); border-radius: 8px; text-align: center; }
 .awareness-card-label { display: block; font-size: 0.75rem; color: var(--muted, #888); text-transform: uppercase; margin-bottom: 4px; }
 .awareness-card-value { display: block; font-size: 1.3rem; font-weight: 700; color: var(--accent, #14F195); }
+
+/* === Welcome Card === */
+.welcome-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px;
+  margin: 24px 12px;
+  background: var(--card-bg, #1a1a1a);
+  border: 1px solid var(--border, #333);
+  border-radius: 12px;
+}
+.welcome-icon {
+  font-size: 2.5rem;
+  color: var(--accent, #14F195);
+  margin-bottom: 12px;
+}
+.welcome-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--fg, #e8e8e8);
+  margin: 0 0 8px;
+}
+.welcome-text {
+  font-size: 0.9rem;
+  color: var(--muted, #aaa);
+  margin: 4px 0;
+  line-height: 1.5;
+}
+.welcome-settings-btn {
+  margin: 16px 0 8px;
+  padding: 10px 24px;
+  background: var(--accent, #14F195);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.welcome-settings-btn:hover {
+  opacity: 0.85;
+}
+.welcome-hint {
+  font-size: 0.8rem;
+  color: var(--muted, #888);
+  margin-top: 4px;
+}
+.welcome-hint a {
+  color: var(--accent, #14F195);
+  text-decoration: none;
+}
+.welcome-hint a:hover {
+  text-decoration: underline;
+}
