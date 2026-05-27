@@ -29,8 +29,8 @@ function Write-Warn   { param($msg) Write-Host "⚠ $msg" -ForegroundColor Yello
 function Write-Err    { param($msg) Write-Host "✖ $msg" -ForegroundColor Red }
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-$REPO_URL    = "https://github.com/ResonantOS/resonantos-vnext.git"
-$BRANCH      = "browser-first-preview"
+$REPO_URL    = "https://github.com/tompennington/resonantos-vnext-Experimental.git"
+$BRANCH      = "tom/browser-first-merged"
 $REPO_DIR    = Join-Path $env:USERPROFILE "resonantos-vnext"
 $USER_DIR    = Join-Path $env:USERPROFILE "ResonantOS_User"
 $BRIDGE_PORT = 47773
@@ -232,7 +232,8 @@ if (-not (Test-Path $secretsFile)) {
 # ── Step 7: Install bridge as Windows Task Scheduler task ──────────────────────
 Write-Step "Registering ResonantOS Bridge as a scheduled task"
 
-$bridgeDaemon = Join-Path $REPO_DIR "browser-first\host\bridge-daemon.mjs"
+$bridgeDaemon = Join-Path $REPO_DIR "browser-first\host\run-browser-first.mjs"
+$bridgeArgs   = "--bridge-only"
 $workingDir   = Join-Path $REPO_DIR "browser-first\host"
 
 # Find node.exe path
@@ -252,7 +253,7 @@ if ($existingTask) {
 try {
     $action   = New-ScheduledTaskAction `
                     -Execute $nodePath `
-                    -Argument "`"$bridgeDaemon`"" `
+                    -Argument "`"$bridgeDaemon`" $bridgeArgs" `
                     -WorkingDirectory $workingDir
 
     $trigger  = New-ScheduledTaskTrigger -AtLogOn
