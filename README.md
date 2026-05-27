@@ -1,73 +1,240 @@
 # ResonantOS vNext
 
-New desktop-first ResonantOS foundation built as a Tauri + React shell.
+ResonantOS is an AI operating system that lives inside your browser. It combines an AI chat assistant, autonomous browser control, a wallet-aware DAO layer, and a security-first architecture into a single Chromium extension.
 
-This app is intentionally separate from the legacy OpenClaw-centered Alpha dashboard. It implements the first executable layer of the vNext architecture:
+This repository contains both the **browser-first** product (active development) and the **desktop Tauri shell** (reference platform).
 
-- modular desktop shell
-- Resonant Engineer kernel assistant
-- replaceable Augmentor Chat default add-on
-- replaceable Living Archive default add-on
-- add-on SDK manifest format
-- explicit capability grants
-- shared/private provider model
-- channel and workspace model
-- local memory/MCP bridge examples for external clients
+## What's In The Box
 
-## Run
+### Browser Extension (Side Panel)
+- **Augmentor Chat** — AI assistant that reads your current page, answers questions, takes actions
+- **Agent Control Mode** — autonomous observe → decide → act → verify loop with safety gates
+- **Protocol Store** — browse and install AI protocols (full-tab)
+- **Blackboard** — visual canvas for diagrams, tables, documents (full-tab)
+- **Living Archive** — save, search, and retrieve anything you've browsed (full-tab)
+- **R-Awareness** — real-time context richness meter showing what the AI sees (full-tab)
+- **Shield** — security audit trail of what the AI blocked or approved (full-tab)
+- **Wallet Adapter** — Solana/Phantom wallet integration (human-only signing)
+- **Resonant Context SDK** — domain-aware context capture (scroll, clicks, visible text, form state, dwell time)
+- **Resonator** — keyboard/mouse/click interaction forwarding
+- **Settings** — provider API key management, model selection, theme toggle
+
+### Supported Providers (14 models)
+| Provider | Models |
+|----------|--------|
+| ResonantOS Alpha | Llama 3.3 70B (default) |
+| OpenAI | GPT-5.5, GPT-5.4 Mini, GPT-4o |
+| Anthropic | Claude Sonnet 4, Claude Opus 4 |
+| MiniMax | M2.7, M2.7 High Speed |
+| Groq | Llama 3.3 70B, Llama 4 Scout |
+| DeepSeek | Chat, Reasoner |
+| xAI | Grok-3, Grok-4 |
+| RunPod | Serverless (zero config) |
+
+### Agent Control — Browser Tools
+```
+/control <goal>          — autonomous browser task
+/browser read            — read current page
+/browser forms           — inspect forms
+/browser click "text"    — click visible element
+/browser type "text"     — type into field
+/browser scroll up/down  — scroll page
+/history                 — search browser history
+/jobs                    — list durable browser jobs
+/pause, /resume, /cancel — job control
+```
+
+### Safety Boundaries (Non-Negotiable)
+- Wallet connect/sign/transfer — **human-only, never automated**
+- Payment, checkout, buy/sell, bridge, mint, claim — **blocked from automation**
+- Login, password, credential actions — **blocked from automation**
+- Public form submit — **requires explicit approval**
+- Site permission modes: blocked, read-only, ask-before-action, trusted-for-safe-actions
+
+## Quick Start
+
+### macOS / Linux
+```bash
+git clone https://github.com/tompennington/resonantos-vnext-Experimental.git
+cd resonantos-vnext-Experimental
+git checkout tom/browser-first-merged
+cd browser-first
+bash install.sh
+```
+
+### Windows
+```powershell
+git clone https://github.com/tompennington/resonantos-vnext-Experimental.git
+cd resonantos-vnext-Experimental
+git checkout tom/browser-first-merged
+cd browser-first
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+### Bridge-Only Mode (Headless / Linux Server)
+```bash
+bash install.sh --bridge-only
+```
+Runs just the bridge server without launching a browser — connect from any Chromium browser with the extension loaded manually.
+
+### Requirements
+| Requirement | Version |
+|-------------|---------|
+| Node.js | 22+ |
+| Chrome, Brave, or Edge | Any recent |
+| Git | Any |
+| API key | At least one (Groq is free) |
+
+**Free API key:** [Groq Console](https://console.groq.com) — sign up in 30 seconds, generous free tier.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Browser (Chrome / Brave / Edge)                    │
+│  ┌───────────────┐  ┌────────────────────────────┐  │
+│  │  Side Panel    │  │  Active Webpage Tab        │  │
+│  │  - Augmentor   │  │  - content.js (observer)   │  │
+│  │  - Chat        │  │  - Resonant Context SDK    │  │
+│  │  - Agent Ctrl  │  │  - Wallet Adapter          │  │
+│  │  - Settings    │  │  - Inline Assistant        │  │
+│  │  - Sidecar Nav │  │  - Resonator               │  │
+│  └───────┬───────┘  └────────────┬───────────────┘  │
+│          │    background.js      │                   │
+│          └──────────┬────────────┘                   │
+└─────────────────────┼───────────────────────────────┘
+                      │ localhost + auth token
+              ┌───────┴───────┐
+              │ Bridge Server │
+              │ (Node.js)     │
+              │ - Provider    │
+              │   routing     │
+              │ - Memory ops  │
+              │ - Audit trail │
+              │ - System      │
+              │   prompts     │
+              └───────────────┘
+```
+
+### Extension Structure
+```
+browser-first/
+├── resonantos-side-panel-extension/
+│   ├── manifest.json              — MV3 permissions + CSP
+│   └── src/
+│       ├── side-panel.html/js/css — main UI (909 lines JS, 3394 lines CSS)
+│       ├── background.js          — service worker + message relay
+│       ├── content.js             — page observer + injection detection + agent control
+│       ├── wallet-adapter.js      — Solana/Phantom integration
+│       ├── resonant-context.js    — context capture SDK
+│       ├── context-plugins.js     — domain-specific context plugins
+│       ├── resonator.js           — interaction forwarding
+│       ├── protocol-store.html/js — full-tab Protocol Store
+│       ├── blackboard.html/js/css — full-tab Blackboard canvas
+│       ├── shield-tab.html/js     — full-tab Shield audit trail
+│       ├── archive-tab.html/js    — full-tab Living Archive
+│       ├── awareness-tab.html/js  — full-tab R-Awareness
+│       └── lib/                   — 22 modular libraries
+│           ├── agent-control-planner.js
+│           ├── agent-control-runner.js
+│           ├── approval-policy.js
+│           ├── browser-job-store.js
+│           ├── browser-page-actions.js
+│           ├── chat-session-store.js
+│           ├── chat-turn-controller.js
+│           ├── composer-controller.js
+│           ├── control-page-observer.js
+│           ├── control-planning-service.js
+│           ├── control-reporting-service.js
+│           ├── control-run-state.js
+│           ├── control-step-executor.js
+│           ├── message-action-controller.js
+│           ├── monitor-renderers.js
+│           ├── side-panel-command-router.js
+│           ├── side-panel-renderers.js
+│           ├── site-permission-store.js
+│           └── tab-context-controller.js
+├── host/
+│   ├── run-browser-first.mjs      — bridge server + provider routing
+│   ├── bridge-server.mjs          — crypto token auth
+│   ├── provider-router.mjs        — multi-provider dispatch
+│   ├── system-prompts.mjs         — agent system prompts
+│   ├── audit-trail.mjs            — security audit logging
+│   ├── living-archive.mjs         — memory bridge
+│   └── update-check.mjs           — version check
+├── test/                          — 105 deterministic tests
+├── native-messaging/              — Chrome native messaging host
+├── webstore/                      — Chrome Web Store submission prep
+├── install.sh                     — macOS/Linux installer
+├── install.ps1 / install.bat      — Windows installer
+└── uninstall.ps1                  — Windows uninstaller
+```
+
+## Security
+
+### Penetration Test Results (2026-05-26)
+9 vulnerabilities found → 9 fixed. Grade: **B+**
+
+| Severity | Count | Status |
+|----------|-------|--------|
+| Critical | 5 | ✅ All fixed |
+| High | 4 | ✅ All fixed |
+
+**Key fixes:**
+- XSS prevention: `escapeHtml()` on all dynamic content (blackboard, side panel, DAO panels)
+- CSP hardened: removed `unsafe-eval` from blackboard
+- URL sanitization: `javascript:`, `data:`, `vbscript:` protocols blocked
+- Sensitive field redaction: passwords, credit cards, SSNs return `[redacted]` to AI
+- Sender validation: background.js message relays verify `sender.id`
+- Manifest lockdown: `web_accessible_resources` restricted from `<all_urls>` to `[]`
+- Prompt injection detection: 10 regex patterns in content.js
+- Security event logging: rolling 20-event buffer in extension storage
+
+Full report: [SECURITY-REPORT-BROWSER-FIRST.md](docs/SECURITY-REPORT-BROWSER-FIRST.md)
+
+### Security Architecture
+- **Bridge auth:** startup-generated token, no unauthenticated requests accepted
+- **No raw credentials in extension:** API keys stay in the bridge, never sent to browser
+- **Wallet boundaries:** hard-coded blocks on all signing/transfer automation — no approval bypass exists
+- **Site permissions:** per-site control over what the AI can see and do
+- **Rate limiting:** page reads throttled to 1 per 2 seconds
+
+## Tests
 
 ```bash
-cd resonantos-vnext
+# Run all 105 browser-first tests
+npm run test:browser-first
+
+# Run live browser control test (launches real browser)
+npm run test:browser-first-live
+
+# Run native host tests
+npm run test:browser-native
+
+# Syntax check all source files
+node --check browser-first/host/*.mjs
+node --check browser-first/resonantos-side-panel-extension/src/*.js
+```
+
+## Desktop Shell (Reference Platform)
+
+The Tauri + React desktop shell remains in this repository as the reference platform and feature reservoir. It is not the active product path.
+
+```bash
 npm install
-npm run tauri:dev
+npm run tauri:dev    # desktop app
+npm run dev          # browser-only preview
 ```
 
-For a browser-only preview:
-
-```bash
-npm run dev
-```
+See [docs/architecture/](docs/architecture/) for the 37 Architecture Decision Records (ADRs) documenting the full system design.
 
 ## Git Workflow
 
-- Active development happens on `dev`.
-- `main` is the stable preview/release branch.
-- Commit to `dev` by default.
-- Do not commit directly to `main` unless explicitly instructed.
-- Merge or PR `dev` into `main` only after deterministic validation.
+- **`tom/browser-first-merged`** — active merged development branch
+- **`browser-first-preview`** — upstream branch (Manolo's agent layer)
+- **`dev`** — desktop shell development
+- **`main`** — stable preview/release branch
 
-## Public Source Preview
+## License
 
-This repository is a public source preview of the new ResonantOS direction plus the SDK foundation for creating add-ons.
-
-It is not a finished consumer release and it is not the legacy Alpha dashboard. The current release scope is:
-
-- ResonantOS vNext shell and runtime foundation
-- Add-on manifest contracts, validation, registry helpers, and capability model
-- Default recommended catalog containing only Augmentor Chat and Living Archive
-- Example memory-provider and Living Archive MCP bridge services for SDK validation
-
-No new optional add-on is released in this checkpoint. Files outside `public/addons/index.json` may exist as SDK references, historical contracts, or development-only work; they are not installed, enabled, trusted, or advertised by default.
-
-Packaged installers are still alpha-grade and unsigned. See [docs/ALPHA_DISTRIBUTION.md](docs/ALPHA_DISTRIBUTION.md) for current artifact and platform notes.
-
-## Current Scope
-
-This is a working foundation, not the full product. The current implementation provides:
-
-- typed public contracts for vNext architecture
-- a persisted local shell state
-- add-on manifest sideloading
-- policy enforcement helpers for archive trust and provider fallback
-- a branded shell UI showing the target operating model
-- scoped Living Archive memory bridge examples for external tools
-
-## Structure
-
-- `src/core/contracts.ts`: public interfaces and types
-- `src/core/defaults.ts`: core services, providers, archive policy, and default state
-- `src/core/policies.ts`: archive write guards and provider selection logic
-- `src/sdk/addons`: add-on SDK validation and registry helpers
-- `public/addons/index.json`: default public add-on catalog
-- `examples`: SDK/reference local services and MCP bridge examples
-- `src-tauri/src/lib.rs`: desktop persistence, sideload commands, and IPC registration
+Public source preview. Not a finished consumer release.
