@@ -77,6 +77,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // ── Blackboard to-panel relay: blackboard tab → side panel ─────────────────
   // Store in chrome.storage.session so the side panel can pick it up via onChanged listener.
   if (message && message.channel === "resonantos.blackboard.to_panel") {
+    if (sender.id !== chrome.runtime.id) {
+      sendResponse({ ok: false, error: "Unauthorized sender" });
+      return true;
+    }
     const record = { ...(message.payload ?? {}), _ts: Date.now() };
     chrome.storage.session.set({ blackboardToPanel: record }).catch(() => undefined);
     sendResponse({ ok: true });
@@ -85,6 +89,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // ── Blackboard relay: side panel → blackboard tab ──────────────────────────
   if (message && message.channel === "resonantos.blackboard.relay") {
+    if (sender.id !== chrome.runtime.id) {
+      sendResponse({ ok: false, error: "Unauthorized sender" });
+      return true;
+    }
     chrome.tabs.query({}, (tabs) => {
       const bbTab = tabs.find((t) => t.url?.includes("blackboard.html"));
       if (bbTab) {

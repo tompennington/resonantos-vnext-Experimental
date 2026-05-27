@@ -1018,7 +1018,7 @@ async function executeProviderList(payload) {
   const providers = Object.entries(secrets).map(([id, key]) => ({
     id,
     hasKey: Boolean(key),
-    maskedKey: key ? key.slice(0, 6) + "..." : null,
+    maskedKey: key ? key.slice(0, 4) + "..." : null,
   }));
   return { ok: true, providers };
 }

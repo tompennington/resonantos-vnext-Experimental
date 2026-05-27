@@ -77,6 +77,12 @@ const archiveSearchInput = document.getElementById("archive-search-input");
 const archiveQuickSave = document.getElementById("archive-quick-save");
 const awRefreshBtn = document.getElementById("aw-refresh-btn");
 
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = String(text ?? "");
+  return div.innerHTML;
+}
+
 const bridgeRequest = createBridgeClient();
 const STORAGE_KEYS = {
   messages: "augmentorBrowserMessages",
@@ -846,7 +852,7 @@ if (tribesSection) {
       const result = await bridgeRequest("/tribes/list");
       const tribes = result.tribes ?? [];
       if (!tribes.length) { body.innerHTML = '<p class="panel-section-placeholder">No tribes yet.</p>'; return; }
-      body.innerHTML = tribes.map(t => `<div class="panel-card"><strong>${t.name || "Unnamed"}</strong><p>${t.description || ""}</p><span class="panel-badge">${t.focus || ""}</span></div>`).join("");
+      body.innerHTML = tribes.map(t => `<div class="panel-card"><strong>${escapeHtml(t.name || "Unnamed")}</strong><p>${escapeHtml(t.description || "")}</p><span class="panel-badge">${escapeHtml(t.focus || "")}</span></div>`).join("");
     } catch (err) { body.innerHTML = `<p class="panel-section-error">Tribes unavailable: ${err.message || err}</p>`; }
   });
 }
@@ -861,7 +867,7 @@ if (bountiesSection) {
       const result = await bridgeRequest("/bounties/list");
       const bounties = result.bounties ?? [];
       if (!bounties.length) { body.innerHTML = '<p class="panel-section-placeholder">No bounties yet.</p>'; return; }
-      body.innerHTML = bounties.map(b => `<div class="panel-card"><strong>${b.title || "Unnamed"}</strong><p>${b.description || ""}</p><span class="panel-badge">${b.reward ?? 0} ${b.rewardToken ?? "RES"}</span><span class="panel-badge status-${b.status ?? "open"}">${b.status ?? "open"}</span></div>`).join("");
+      body.innerHTML = bounties.map(b => `<div class="panel-card"><strong>${escapeHtml(b.title || "Unnamed")}</strong><p>${escapeHtml(b.description || "")}</p><span class="panel-badge">${escapeHtml(String(b.reward ?? 0))} ${escapeHtml(b.rewardToken ?? "RES")}</span><span class="panel-badge status-${escapeHtml(b.status ?? "open")}">${escapeHtml(b.status ?? "open")}</span></div>`).join("");
     } catch (err) { body.innerHTML = `<p class="panel-section-error">Bounties unavailable: ${err.message || err}</p>`; }
   });
 }
@@ -897,7 +903,7 @@ if (archiveSearchBtn && archiveSearchInput) {
       const result = await bridgeRequest("/memory/search", { method: "POST", body: { query } });
       const hits = result.results ?? [];
       if (!hits.length) { resultsDiv.innerHTML = '<p class="panel-section-placeholder">No results.</p>'; return; }
-      resultsDiv.innerHTML = hits.map(h => `<div class="archive-result"><strong>${h.title || h.path || "Untitled"}</strong><p>${(h.snippet || "").slice(0, 200)}</p></div>`).join("");
+      resultsDiv.innerHTML = hits.map(h => `<div class="archive-result"><strong>${escapeHtml(h.title || h.path || "Untitled")}</strong><p>${escapeHtml((h.snippet || "").slice(0, 200))}</p></div>`).join("");
     } catch (err) { resultsDiv.innerHTML = `<p class="panel-section-error">${err.message || err}</p>`; }
   });
 }

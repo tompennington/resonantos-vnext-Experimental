@@ -434,6 +434,19 @@ const isEditable = (element) =>
   !element.disabled &&
   !element.readOnly;
 
+const SENSITIVE_INPUT_TYPES = new Set(["password", "cc-number", "cc-exp", "cc-csc", "cc-name", "cc-type"]);
+
+const isSensitiveField = (element) => {
+  const inputType = String(element.type || "").toLowerCase();
+  const autocomplete = String(element.getAttribute("autocomplete") || "").toLowerCase();
+  return (
+    SENSITIVE_INPUT_TYPES.has(inputType) ||
+    inputType === "password" ||
+    /password|credit|card|cvv|cvc|csc|ssn|social.security/i.test(autocomplete) ||
+    /^(cc-number|cc-exp|cc-csc|cc-name|cc-type|current-password|new-password)$/.test(autocomplete)
+  );
+};
+
 const describeEditable = (element) => ({
   ref: ensureControlRef(element),
   tagName: element.tagName.toLowerCase(),
@@ -442,7 +455,9 @@ const describeEditable = (element) => ({
   id: element.id || "",
   role: element.getAttribute("role") || "",
   label: element.getAttribute("aria-label") || element.getAttribute("placeholder") || element.getAttribute("title") || "",
-  valuePreview: "value" in element ? String(element.value || "").slice(0, 120) : String(element.textContent || "").slice(0, 120)
+  valuePreview: isSensitiveField(element)
+    ? "[redacted]"
+    : ("value" in element ? String(element.value || "").slice(0, 120) : String(element.textContent || "").slice(0, 120))
 });
 
 const editableLabel = (element) => [

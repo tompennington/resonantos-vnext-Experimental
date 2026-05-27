@@ -421,10 +421,25 @@ function markdownToHtml(md) {
   return output.join("\n");
 }
 
+function sanitizeUrl(url) {
+  const trimmed = String(url ?? "").trim();
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) return "#blocked";
+  return trimmed;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = String(text ?? "");
+  return div.innerHTML;
+}
+
 function inlineMarkdown(text) {
+  // Escape HTML entities in raw text before processing markdown
+  // We escape first, then apply markdown patterns that produce safe tags
+  text = escapeHtml(text);
   // Links: [text](url)
   text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, t, u) =>
-    `<a href="${u}" target="_blank" rel="noopener noreferrer">${t}</a>`);
+    `<a href="${sanitizeUrl(u)}" target="_blank" rel="noopener noreferrer">${t}</a>`);
   // Bold+italic
   text = text.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
   // Bold

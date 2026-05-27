@@ -46,7 +46,7 @@
         "src/resonant-context.js",
         "src/context-plugins.js"
       ],
-      "matches": ["<all_urls>"]
+      "matches": []
     }
   ],
   "icons": {
