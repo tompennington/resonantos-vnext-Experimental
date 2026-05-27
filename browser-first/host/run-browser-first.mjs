@@ -1167,6 +1167,27 @@ const autoOpenSidePanel = args.get("auto-open-side-panel") !== "false";
 const bridgePort = Number(args.get("bridge-port") ?? process.env.RESONANTOS_BROWSER_FIRST_BRIDGE_PORT ?? defaultBridgePort);
 const remoteDebuggingPort = args.get("remote-debugging-port") ?? process.env.RESONANTOS_BROWSER_FIRST_REMOTE_DEBUGGING_PORT;
 
+// Bridge-only mode: start just the HTTP bridge without browser/native host
+if (args.get("bridge-only") === "true" || process.env.RESONANTOS_BRIDGE_ONLY === "true") {
+  await mkdir(path.join(userRoot(), "BrowserFirst"), { recursive: true });
+  const bridgeConfigPath = await writeBridgeConfig({ extensionRoot: resonantExtension, bridgePort, bridgeToken });
+  const bridgeServer = await startBridgeServer({
+    port: bridgePort,
+    bridgeToken,
+    extensionOrigin: resonantExtensionOrigin,
+    routes: bridgeRoutes,
+  });
+  console.log(`[ResonantOS] Bridge-only mode active on port ${bridgePort}`);
+  console.log(`[ResonantOS] Bridge config written to: ${bridgeConfigPath}`);
+  console.log(`[ResonantOS] Load the extension manually in Chrome/Brave.`);
+  console.log(`[ResonantOS] Extension path: ${resonantExtension}`);
+  // Keep process alive
+  process.on("SIGINT", () => { console.log("\n[ResonantOS] Bridge shutting down."); process.exit(0); });
+  process.on("SIGTERM", () => { process.exit(0); });
+  // Block forever (bridge server handles requests)
+  await new Promise(() => {});
+}
+
 if (!existsSync(hostBinary)) {
   console.error(`Browser-first host binary is missing: ${hostBinary}`);
   console.error("Run: npm run browser-native:build:required");

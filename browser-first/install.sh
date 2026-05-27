@@ -219,6 +219,16 @@ step "Installing ResonantOS bridge daemon"
 
 BRIDGE_DIR="$REPO_DIR/browser-first/host"
 
+# Detect whether the native host binary exists — if not, run in bridge-only mode
+HOST_BINARY="$REPO_DIR/addons/resonant-browser-native/build/ResonantBrowserNativeHost.app/Contents/MacOS/ResonantBrowserNativeHost"
+if [ ! -f "$HOST_BINARY" ]; then
+  BRIDGE_ARGS="run-browser-first.mjs --bridge-only"
+  info "Native host not found — bridge will run in standalone mode (--bridge-only)"
+else
+  BRIDGE_ARGS="run-browser-first.mjs"
+  info "Native host found — bridge will run in full mode"
+fi
+
 if [ "$OS_TYPE" = "macos" ]; then
   LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
   PLIST_DEST="$LAUNCH_AGENTS_DIR/com.resonantos.bridge.plist"
@@ -236,7 +246,7 @@ if [ "$OS_TYPE" = "macos" ]; then
   <key>ProgramArguments</key>
   <array>
     <string>${NODE_BIN}</string>
-    <string>run-browser-first.mjs</string>
+$(for arg in $BRIDGE_ARGS; do echo "    <string>${arg}</string>"; done)
   </array>
 
   <key>WorkingDirectory</key>
@@ -285,7 +295,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=${BRIDGE_DIR}
-ExecStart=${NODE_BIN} run-browser-first.mjs
+ExecStart=${NODE_BIN} ${BRIDGE_ARGS}
 Restart=always
 RestartSec=5
 Environment=HOME=${HOME}
