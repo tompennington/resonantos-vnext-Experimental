@@ -32,7 +32,8 @@ const repoRoot = path.resolve(__dirname, "..");
 const extRoot = path.join(repoRoot, "browser-first", "resonantos-side-panel-extension");
 const bridgeConfigPath = path.join(extRoot, "src", "bridge-config.generated.js");
 const bridgeScript = path.join(repoRoot, "browser-first", "host", "run-browser-first.mjs");
-const trayIconPath = path.join(extRoot, "icon16.png");
+const trayIconPath = path.join(__dirname, "icon-32.png");
+const appIconPath = path.join(__dirname, "icon.png");
 const preloadPath = path.join(__dirname, "preload.mjs");
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -180,6 +181,7 @@ async function loadResonantExtension() {
 
 async function createMainWindow(state) {
   mainWindow = new BrowserWindow({
+    icon: nativeImage.createFromPath(appIconPath),
     x: state.x,
     y: state.y,
     width: state.width,
@@ -232,6 +234,7 @@ async function openSidePanel() {
     return;
   }
   sidePanelWindow = new BrowserWindow({
+    icon: nativeImage.createFromPath(appIconPath),
     width: 420,
     height: 760,
     minWidth: 320,

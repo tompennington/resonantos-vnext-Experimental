@@ -51,16 +51,16 @@ cat > "$SCRIPT_DIR/electron-builder.json" <<EOF
   ],
   "mac": {
     "target": "dmg",
-    "icon": "$REPO_ROOT/browser-first/resonantos-side-panel-extension/icon128.png",
+    "icon": "$REPO_ROOT/electron-pwa/icon.icns",
     "category": "public.app-category.productivity"
   },
   "linux": {
     "target": "AppImage",
-    "icon": "$REPO_ROOT/browser-first/resonantos-side-panel-extension/icon128.png"
+    "icon": "$REPO_ROOT/electron-pwa/icon.icns"
   },
   "win": {
     "target": "nsis",
-    "icon": "$REPO_ROOT/browser-first/resonantos-side-panel-extension/icon128.png"
+    "icon": "$REPO_ROOT/electron-pwa/icon.icns"
   }
 }
 EOF
