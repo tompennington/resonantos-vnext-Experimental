@@ -3,7 +3,9 @@
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const BRIDGE_URL = "http://127.0.0.1:47773";
+const _bridgeConfig = globalThis.__RESONANTOS_BRIDGE_CONFIG__ ?? {};
+const BRIDGE_URL = _bridgeConfig.bridgeUrl || "http://127.0.0.1:47773";
+const BRIDGE_TOKEN = _bridgeConfig.bridgeToken || "";
 
 // ---------------------------------------------------------------------------
 // Helper: el() — minimal DOM element creator
@@ -22,7 +24,10 @@ const bridgeRequest = async (route, options = {}) => {
   const url = `${BRIDGE_URL}${route}`;
   const fetchOptions = {
     method: options.method ?? "GET",
-    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(BRIDGE_TOKEN ? { "X-ResonantOS-Bridge-Token": BRIDGE_TOKEN } : {}),
+    },
     body: options.body ? JSON.stringify(options.body) : undefined,
   };
 
@@ -151,3 +156,18 @@ if (archiveQuickSaveBtn) archiveQuickSaveBtn.addEventListener("click", () => voi
 // Init
 // ---------------------------------------------------------------------------
 loadArchiveMeta();
+
+// ---------------------------------------------------------------------------
+// Close tab button — uses chrome.tabs API (window.close blocked on non-script-opened tabs)
+// ---------------------------------------------------------------------------
+const closeTabBtn = document.getElementById("close-tab-btn");
+if (closeTabBtn) {
+  closeTabBtn.addEventListener("click", async () => {
+    try {
+      const tab = await chrome.tabs.getCurrent();
+      if (tab?.id) await chrome.tabs.remove(tab.id);
+    } catch {
+      window.close(); // fallback
+    }
+  });
+}

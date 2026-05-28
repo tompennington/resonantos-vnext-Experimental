@@ -27,7 +27,10 @@
             <button class="topbar-tab" type="button">Links</button>
             <button class="topbar-tab" type="button">Images</button>
           </nav>
-          <button id="open-sidebar" type="button" class="share-button">Open Sidebar</button>
+          <div class="topbar-actions">
+            <button id="popout-btn" type="button" class="topbar-action-btn" title="Launch as desktop app">⧉ Pop Out</button>
+            <button id="open-sidebar" type="button" class="topbar-action-btn">Open Sidebar</button>
+          </div>
         </header>
 
         <section id="transcript" class="answer-thread" aria-live="polite"></section>
@@ -51,7 +54,7 @@
               <option value="batiai/gemma4-e2b:q4">Gemma 4 2B</option>
             </select>
             <select id="thinking-depth" class="depth-select" aria-label="Thinking depth">
-              <option value="minimal">Minimal</option>
+              <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
             </select>

@@ -928,10 +928,20 @@ if (settingsClose && settingsOverlay) {
 if (settingsSave) {
   settingsSave.addEventListener("click", async () => {
     const openaiKey = document.getElementById("key-openai")?.value?.trim() ?? "";
+    const anthropicKey = document.getElementById("key-anthropic")?.value?.trim() ?? "";
+    const groqKey = document.getElementById("key-groq")?.value?.trim() ?? "";
+    const deepseekKey = document.getElementById("key-deepseek")?.value?.trim() ?? "";
+    const xaiKey = document.getElementById("key-xai")?.value?.trim() ?? "";
     const minimaxKey = document.getElementById("key-minimax")?.value?.trim() ?? "";
+    const runpodKey = document.getElementById("key-runpod")?.value?.trim() ?? "";
     const providers = {};
     if (openaiKey) providers["shared-openai"] = openaiKey;
+    if (anthropicKey) providers["shared-anthropic"] = anthropicKey;
+    if (groqKey) providers["shared-groq"] = groqKey;
+    if (deepseekKey) providers["shared-deepseek"] = deepseekKey;
+    if (xaiKey) providers["shared-xai"] = xaiKey;
     if (minimaxKey) providers["shared-minimax"] = minimaxKey;
+    if (runpodKey) providers["shared-runpod"] = runpodKey;
     try {
       await bridgeRequest("/providers/save", { method: "POST", body: { providers } });
       if (settingsStatus) { settingsStatus.textContent = "Saved ✓"; setTimeout(() => { settingsStatus.textContent = ""; }, 2000); }
@@ -1013,5 +1023,20 @@ if (copyMobileUrl) {
     navigator.clipboard.writeText("https://resonantclaw.com").catch(() => {});
     copyMobileUrl.textContent = "Copied!";
     setTimeout(() => { copyMobileUrl.textContent = "Copy URL"; }, 1500);
+  });
+}
+
+// === Pop Out — launch as desktop window or browser popup ===
+const popoutBtn = document.getElementById("popout-btn");
+if (popoutBtn) {
+  popoutBtn.addEventListener("click", async () => {
+    // If inside Electron, use IPC to open a new window
+    if (window.resonantOS?.openPopout) {
+      window.resonantOS.openPopout();
+      return;
+    }
+    // Browser fallback: open main workspace as a popup window (PWA-style)
+    const extUrl = chrome.runtime.getURL("src/main-workspace.html");
+    window.open(extUrl, "ResonantOS", "width=1400,height=900,menubar=no,toolbar=no,location=no,status=no");
   });
 }

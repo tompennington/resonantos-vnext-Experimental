@@ -4,7 +4,9 @@
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const BRIDGE_URL = "http://127.0.0.1:47773";
+const _bridgeConfig = globalThis.__RESONANTOS_BRIDGE_CONFIG__ ?? {};
+const BRIDGE_URL = _bridgeConfig.bridgeUrl || "http://127.0.0.1:47773";
+const BRIDGE_TOKEN = _bridgeConfig.bridgeToken || "";
 
 // ---------------------------------------------------------------------------
 // Helper: el() — minimal DOM element creator
@@ -23,7 +25,10 @@ const bridgeRequest = async (route, options = {}) => {
   const url = `${BRIDGE_URL}${route}`;
   const fetchOptions = {
     method: options.method ?? "GET",
-    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(BRIDGE_TOKEN ? { "X-ResonantOS-Bridge-Token": BRIDGE_TOKEN } : {}),
+    },
     body: options.body ? JSON.stringify(options.body) : undefined,
   };
 

@@ -57,6 +57,7 @@ var calculateContextRichness = function (ctx) {
 const HTML_ENTITY_RE = /&(?:#\d+|#x[0-9a-f]+|[a-z]+);/gi;
 
 const INJECTION_PATTERNS = [
+  // Original 10 patterns
   /ignore\s+(?:previous|prior|above|all)\s+(?:instructions?|prompts?|context)/i,
   /system\s*:/i,
   /\[INST\]/i,
@@ -67,6 +68,17 @@ const INJECTION_PATTERNS = [
   /you\s+are\s+now\s+(?:a|an|the)\s+/i,
   /disregard\s+(?:previous|your|all)\s+(?:instructions?|prompts?|training)/i,
   /act\s+as\s+(?:a|an|the)\s+(?:different|new|evil|unrestricted)/i,
+  // Alpha Logician patterns — ported from shield-gate + production_rules.mg
+  /new\s+instructions?\s*:/i,
+  /override\s+(?:previous|all|system)\s+instructions?/i,
+  /pretend\s+(?:you\s+are|to\s+be)\s+/i,
+  /<\s*system\s*>/i,
+  /\{\s*"role"\s*:\s*"system"/i,
+  /\bDAN\b.*mode/i,
+  /developer\s+mode\s+enabled/i,
+  /\[SYSTEM\]/i,
+  /\bHUMAN\s*:/i,
+  /\bASSISTANT\s*:/i,
 ];
 
 const sanitizePageText = (raw) => {

@@ -24,6 +24,7 @@
         <span class="panel-title">◈ ResonantOS</span>
         <div class="header-actions">
           <button id="theme-toggle" type="button" class="icon-button" title="Toggle light/dark mode" aria-label="Toggle theme">🌙</button>
+          <button id="popout-btn" type="button" class="icon-button" title="Pop out to desktop app" aria-label="Pop out">⧉</button>
           <button id="settings-toggle" type="button" class="icon-button" title="Settings" aria-label="Open settings">⚙</button>
         </div>
       </header>
@@ -127,7 +128,7 @@
             </optgroup>
           </select>
           <select id="thinking-depth" class="depth-select" aria-label="Thinking depth">
-            <option value="minimal">Minimal</option>
+            <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
@@ -170,8 +171,28 @@
             <input id="key-openai" type="password" class="settings-input" placeholder="sk-proj-…" autocomplete="off" />
           </div>
           <div>
+            <div class="settings-label">Anthropic API Key <span id="key-anthropic-current" class="settings-current"></span></div>
+            <input id="key-anthropic" type="password" class="settings-input" placeholder="sk-ant-…" autocomplete="off" />
+          </div>
+          <div>
+            <div class="settings-label">Groq API Key <span id="key-groq-current" class="settings-current"></span></div>
+            <input id="key-groq" type="password" class="settings-input" placeholder="gsk_…" autocomplete="off" />
+          </div>
+          <div>
+            <div class="settings-label">DeepSeek API Key <span id="key-deepseek-current" class="settings-current"></span></div>
+            <input id="key-deepseek" type="password" class="settings-input" placeholder="sk-…" autocomplete="off" />
+          </div>
+          <div>
+            <div class="settings-label">xAI (Grok) API Key <span id="key-xai-current" class="settings-current"></span></div>
+            <input id="key-xai" type="password" class="settings-input" placeholder="xai-…" autocomplete="off" />
+          </div>
+          <div>
             <div class="settings-label">MiniMax API Key <span id="key-minimax-current" class="settings-current"></span></div>
             <input id="key-minimax" type="password" class="settings-input" placeholder="eyJ…" autocomplete="off" />
+          </div>
+          <div>
+            <div class="settings-label">RunPod API Key <span id="key-runpod-current" class="settings-current"></span></div>
+            <input id="key-runpod" type="password" class="settings-input" placeholder="rpa_…" autocomplete="off" />
           </div>
         </div>
         <div class="settings-panel-header" style="margin-top:14px;">

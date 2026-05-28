@@ -3,7 +3,9 @@
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const BRIDGE_URL = "http://127.0.0.1:47773";
+const _bridgeConfig = globalThis.__RESONANTOS_BRIDGE_CONFIG__ ?? {};
+const BRIDGE_URL = _bridgeConfig.bridgeUrl || "http://127.0.0.1:47773";
+const BRIDGE_TOKEN = _bridgeConfig.bridgeToken || "";
 
 // ---------------------------------------------------------------------------
 // Helper: el() — minimal DOM element creator
@@ -22,7 +24,10 @@ const bridgeRequest = async (route, options = {}) => {
   const url = `${BRIDGE_URL}${route}`;
   const fetchOptions = {
     method: options.method ?? "GET",
-    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(BRIDGE_TOKEN ? { "X-ResonantOS-Bridge-Token": BRIDGE_TOKEN } : {}),
+    },
     body: options.body ? JSON.stringify(options.body) : undefined,
   };
 
@@ -127,6 +132,63 @@ const loadShieldData = async () => {
 };
 
 // ---------------------------------------------------------------------------
+// Security event log from chrome.storage.local (written by content.js logSecurityEvent)
+// ---------------------------------------------------------------------------
+const securityLogEl = document.getElementById("shield-security-log");
+
+const renderSecurityLog = (entries) => {
+  if (!securityLogEl) return;
+  if (!entries || !entries.length) {
+    securityLogEl.innerHTML = '<p class="sidecar-placeholder">No security events recorded.</p>';
+    return;
+  }
+  securityLogEl.innerHTML = entries
+    .slice()
+    .reverse()
+    .map((e) =>
+      `<div class="shield-event-row">
+        <span class="shield-event-type shield-event-type-${escapeHtml(e.type ?? "info")}">${escapeHtml(e.type ?? "info")}</span>
+        <span class="shield-event-msg">${escapeHtml(e.detail ?? e.text?.slice(0, 120) ?? "")}</span>
+        <span class="shield-event-url">${escapeHtml((e.url ?? "").replace(/^https?:\/\//, "").slice(0, 60))}</span>
+        <span class="shield-event-time">${escapeHtml(e.ts ?? "")}</span>
+      </div>`
+    )
+    .join("");
+};
+
+const loadSecurityLog = async () => {
+  try {
+    const result = await chrome.storage.local.get("securityLog");
+    renderSecurityLog(result.securityLog ?? []);
+  } catch (err) {
+    if (securityLogEl) securityLogEl.innerHTML = `<p class="sidecar-placeholder">Could not read security log: ${escapeHtml(String(err))}</p>`;
+  }
+};
+
+// Live updates: re-render whenever securityLog changes
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.securityLog) {
+    renderSecurityLog(changes.securityLog.newValue ?? []);
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 loadShieldData();
+loadSecurityLog();
+
+// ---------------------------------------------------------------------------
+// Close tab button — uses chrome.tabs API (window.close blocked on non-script-opened tabs)
+// ---------------------------------------------------------------------------
+const closeTabBtn = document.getElementById("close-tab-btn");
+if (closeTabBtn) {
+  closeTabBtn.addEventListener("click", async () => {
+    try {
+      const tab = await chrome.tabs.getCurrent();
+      if (tab?.id) await chrome.tabs.remove(tab.id);
+    } catch {
+      window.close(); // fallback
+    }
+  });
+}
