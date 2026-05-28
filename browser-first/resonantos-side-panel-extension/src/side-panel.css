@@ -795,6 +795,37 @@ textarea:disabled {
   font-weight: 700;
 }
 
+/* Pop Out + Settings — more visible in header */
+#popout-btn {
+  border: 1px solid rgba(36, 209, 143, 0.3);
+  background: rgba(36, 209, 143, 0.1);
+  color: rgba(36, 209, 143, 0.9);
+  font-size: 1rem;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+}
+
+#popout-btn:hover {
+  background: rgba(36, 209, 143, 0.22);
+  border-color: rgba(36, 209, 143, 0.5);
+  color: var(--accent);
+}
+
+#settings-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(238, 247, 240, 0.7);
+  font-size: 1rem;
+  width: 34px;
+  height: 34px;
+}
+
+#settings-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+
 /* ============================================================================
    SEND BUTTON
    ============================================================================ */
@@ -1590,8 +1621,9 @@ textarea::placeholder {
 .side-panels-container {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: 0 var(--space-3) var(--space-4);
+  gap: 6px;
+  padding: var(--space-2) var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
 }
 
 /* details element used as collapsible section */
@@ -3012,34 +3044,35 @@ textarea::placeholder {
 }
 
 .panel-nav-btn {
-  /* Inherits panel-section-summary appearance, minus the disclosure triangle */
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  padding: var(--space-2) var(--space-3);
+  padding: 10px var(--space-3);
   cursor: pointer;
-  color: var(--accent);
-  font-size: var(--text-xs);
+  color: var(--text);
+  font-size: var(--text-sm);
   font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
   user-select: none;
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
   text-align: left;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
+  margin: 2px 0;
 }
 
 .panel-nav-btn:hover {
-  background: rgba(255,255,255,0.03);
+  background: rgba(36, 209, 143, 0.12);
+  border-color: rgba(36, 209, 143, 0.3);
+  color: var(--accent);
 }
 
 .panel-nav-btn::before {
-  /* External-link arrow instead of disclosure triangle */
   content: '↗';
-  font-size: 11px;
-  color: var(--muted);
+  font-size: 12px;
+  color: rgba(36, 209, 143, 0.6);
   flex-shrink: 0;
 }
 
