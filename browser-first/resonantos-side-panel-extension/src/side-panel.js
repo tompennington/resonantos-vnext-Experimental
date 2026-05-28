@@ -1003,18 +1003,22 @@ if (copyMobileUrl) {
   });
 }
 
-// === Pop Out — launch as desktop window or browser popup ===
+// === Pop Out — launch Electron desktop app ===
 const popoutBtn = document.getElementById("popout-btn");
 if (popoutBtn) {
   popoutBtn.addEventListener("click", async () => {
-    // If inside Electron, use IPC to open a new window
-    // Electron PWA: use IPC to open side panel window
+    // If already inside Electron, toggle the side panel
     if (window.resonantosElectronPWA?.openSidePanel) {
       window.resonantosElectronPWA.openSidePanel();
       return;
     }
-    // Browser fallback: open main workspace as a popup window (PWA-style)
-    const extUrl = chrome.runtime.getURL("src/main-workspace.html");
-    window.open(extUrl, "ResonantOS", "width=1400,height=900,menubar=no,toolbar=no,location=no,status=no");
+    // Browser: launch Electron PWA app via native messaging or shell exec
+    try {
+      const response = await fetch("http://127.0.0.1:47773/launch-electron", { method: "POST" });
+      if (response.ok) return;
+    } catch {}
+    // Fallback: tell user how to launch
+    const msg = "To launch the desktop app, run in Terminal:\n\ncd ~/resonantos-vnext\nRES0NANTOS_ALPHA_KEY=\"your-key\" npx electron electron-pwa/main.mjs";
+    alert(msg);
   });
 }

@@ -1293,6 +1293,29 @@ async function executeStoreProtocols(payload) {
   return { ok: true, protocols };
 }
 
+// Launch Electron PWA from browser extension
+let electronProcess = null;
+async function executeLaunchElectron() {
+  // Don't launch if already running
+  if (electronProcess && !electronProcess.killed) {
+    return { ok: true, status: "already-running" };
+  }
+  const electronMain = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "electron-pwa", "main.mjs");
+  if (!existsSync(electronMain)) {
+    return { ok: false, error: "Electron PWA not found at " + electronMain };
+  }
+  const { spawn: spawnProcess } = await import("node:child_process");
+  electronProcess = spawnProcess("npx", ["electron", electronMain], {
+    cwd: path.resolve(path.dirname(electronMain), ".."),
+    env: { ...process.env },
+    stdio: "ignore",
+    detached: true,
+  });
+  electronProcess.unref();
+  electronProcess.on("exit", () => { electronProcess = null; });
+  return { ok: true, status: "launched" };
+}
+
 const bridgeRoutes = [
   { method: "GET", path: "/status", handler: executeSystemStatus },
   { method: "POST", path: "/augmentor/chat", handler: executeBridgeChat },
@@ -1317,6 +1340,7 @@ const bridgeRoutes = [
   { method: "GET", path: "/tribes/list", handler: executeTribes },
   { method: "GET", path: "/bounties/list", handler: executeBounties },
   { method: "GET", path: "/store/protocols", handler: executeStoreProtocols },
+  { method: "POST", path: "/launch-electron", handler: executeLaunchElectron },
 ];
 
 const args = parseArgs(process.argv.slice(2));
