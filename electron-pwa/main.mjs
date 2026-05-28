@@ -296,7 +296,13 @@ async function openSidecarTab(pagePath) {
     const currentUrl = sidecarView.webContents.getURL();
     if (currentUrl === targetUrl) {
       mainWindow.removeBrowserView(sidecarView);
+      sidecarView.webContents.destroy();
+      sidecarView = null;
       sidecarActive = false;
+      // Re-focus side panel
+      if (sidePanelVisible && sidePanelView) {
+        mainWindow.setTopBrowserView(sidePanelView);
+      }
       return;
     }
   }
@@ -332,7 +338,13 @@ function closeSidecarTab() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   if (sidecarActive && sidecarView) {
     mainWindow.removeBrowserView(sidecarView);
+    sidecarView.webContents.destroy();
+    sidecarView = null;
     sidecarActive = false;
+  }
+  // Re-focus the side panel so its buttons work
+  if (sidePanelVisible && sidePanelView) {
+    mainWindow.setTopBrowserView(sidePanelView);
   }
 }
 
