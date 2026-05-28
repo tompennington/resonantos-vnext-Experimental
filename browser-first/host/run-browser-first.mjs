@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { appendFile, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
@@ -1344,7 +1344,23 @@ const bridgeRoutes = [
 ];
 
 const args = parseArgs(process.argv.slice(2));
-const bridgeToken = args.get("bridge-token") ?? process.env.RESONANTOS_BROWSER_FIRST_BRIDGE_TOKEN ?? createBridgeToken();
+// Persistent bridge token — survives restarts so extension never goes stale
+const bridgeTokenFile = path.join(os.homedir(), ".resonantos-bridge-token");
+function getOrCreateBridgeToken() {
+  // CLI arg or env var takes priority
+  const explicit = args.get("bridge-token") ?? process.env.RESONANTOS_BROWSER_FIRST_BRIDGE_TOKEN;
+  if (explicit) return explicit;
+  // Read persisted token if it exists
+  try {
+    const saved = readFileSync(bridgeTokenFile, "utf8").trim();
+    if (saved.length > 16) return saved;
+  } catch {}
+  // Generate new token and persist it
+  const token = createBridgeToken();
+  try { writeFileSync(bridgeTokenFile, token, { mode: 0o600 }); } catch {}
+  return token;
+}
+const bridgeToken = getOrCreateBridgeToken();
 
 if (args.get("bridge-auth-self-test") === "true") {
   const result = await runBridgeAuthSelfTest({
