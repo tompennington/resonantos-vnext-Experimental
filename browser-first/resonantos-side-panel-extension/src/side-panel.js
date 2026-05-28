@@ -986,7 +986,12 @@ const openSidecarPage = async (filename) => {
   const existing = tabs.find(t => t.url?.includes(filename));
   if (existing) { await chrome.tabs.update(existing.id, { active: true }).catch(() => undefined); return; }
   const url = chrome.runtime.getURL(`src/${filename}`);
-  await chrome.tabs.create({ url });
+  // Use a popup window instead of a new tab: chrome.tabs.create() activates the new
+  // tab, which suspends the side panel's JS context for the original tab. When the
+  // user closes the sidecar tab Chrome switches back and the side panel's event
+  // listeners are gone. A popup window opens independently and never disturbs the
+  // side panel's tab context.
+  await chrome.windows.create({ type: "popup", url, width: 1080, height: 800 });
 };
 
 if (openStoreBtn) openStoreBtn.addEventListener("click", () => void openSidecarPage("protocol-store.html"));
@@ -1014,8 +1019,8 @@ if (popoutBtn) {
     }
     // Browser: launch Electron PWA app via native messaging or shell exec
     try {
-      const response = await fetch("http://127.0.0.1:47773/launch-electron", { method: "POST" });
-      if (response.ok) return;
+      await bridgeRequest("/launch-electron", { method: "POST" });
+      return;
     } catch {}
     // Fallback: tell user how to launch
     const msg = "To launch the desktop app, run in Terminal:\n\ncd ~/resonantos-vnext\nRES0NANTOS_ALPHA_KEY=\"your-key\" npx electron electron-pwa/main.mjs";
