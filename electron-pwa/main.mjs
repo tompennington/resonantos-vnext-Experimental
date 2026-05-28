@@ -1,0 +1,350 @@
+/**
+ * ResonantOS Electron PWA — main process
+ *
+ * Lean wrapper (<300 lines) that:
+ *   1. Spawns the browser-first bridge server (bridge-only mode)
+ *   2. Waits for bridge-config.generated.js to be written
+ *   3. Loads the ResonantOS side-panel extension so chrome.* APIs work
+ *   4. Opens a frameless BrowserWindow on the extension's main-workspace.html
+ *   5. Provides system tray, single-instance lock, window-state persistence
+ */
+
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  nativeImage,
+  session,
+  Tray,
+} from "electron";
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import process from "node:process";
+import { fileURLToPath } from "node:url";
+
+// ─── Paths ────────────────────────────────────────────────────────────────────
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..");
+const extRoot = path.join(repoRoot, "browser-first", "resonantos-side-panel-extension");
+const bridgeConfigPath = path.join(extRoot, "src", "bridge-config.generated.js");
+const bridgeScript = path.join(repoRoot, "browser-first", "host", "run-browser-first.mjs");
+const trayIconPath = path.join(extRoot, "icon16.png");
+const preloadPath = path.join(__dirname, "preload.mjs");
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
+let mainWindow = null;
+let sidePanelWindow = null;
+let tray = null;
+let bridgeProcess = null;
+let extensionId = null;
+app.isQuitting = false;
+
+// ─── Single-instance lock ─────────────────────────────────────────────────────
+
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  console.error("[electron-pwa] Another instance is already running.");
+  app.quit();
+  process.exit(0);
+}
+
+app.on("second-instance", () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
+
+// ─── Window-state persistence ─────────────────────────────────────────────────
+
+const DEFAULT_BOUNDS = { width: 1280, height: 820 };
+
+async function loadWindowState() {
+  try {
+    const statePath = path.join(app.getPath("userData"), "pwa-window-state.json");
+    const raw = await readFile(statePath, "utf8");
+    return { ...DEFAULT_BOUNDS, ...JSON.parse(raw) };
+  } catch {
+    return { ...DEFAULT_BOUNDS };
+  }
+}
+
+async function saveWindowState(win) {
+  if (!win || win.isMaximized() || win.isMinimized()) return;
+  try {
+    const statePath = path.join(app.getPath("userData"), "pwa-window-state.json");
+    await writeFile(statePath, JSON.stringify(win.getBounds()), "utf8");
+  } catch { /* non-fatal */ }
+}
+
+// ─── Bridge process ───────────────────────────────────────────────────────────
+
+/**
+ * Start the bridge in bridge-only mode.
+ * Resolves once the bridge confirms it has written the config file.
+ * Rejects on timeout or non-zero exit before ready.
+ */
+function startBridge() {
+  return new Promise((resolve, reject) => {
+    const env = {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: "1",
+    };
+    // Pass API key through to bridge
+    if (process.env.RESONANTOS_ALPHA_KEY) {
+      env.RESONANTOS_ALPHA_KEY = process.env.RESONANTOS_ALPHA_KEY;
+    }
+
+    console.log("[electron-pwa] Starting bridge (bridge-only mode)…");
+    bridgeProcess = spawn("node", [bridgeScript, "--bridge-only=true"], {
+      env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let resolved = false;
+    const done = (err) => {
+      if (resolved) return;
+      resolved = true;
+      if (err) reject(err);
+      else resolve();
+    };
+
+    bridgeProcess.stdout.on("data", (chunk) => {
+      const text = chunk.toString();
+      process.stdout.write(`[bridge] ${text}`);
+      // Bridge prints this line immediately after writing the config file
+      if (text.includes("Bridge config written to:") || text.includes("Bridge-only mode active")) {
+        done();
+      }
+    });
+
+    bridgeProcess.stderr.on("data", (chunk) => {
+      process.stderr.write(`[bridge:err] ${chunk}`);
+    });
+
+    bridgeProcess.on("exit", (code, signal) => {
+      console.log(`[electron-pwa] Bridge exited (code=${code} signal=${signal})`);
+      bridgeProcess = null;
+      if (!resolved) done(new Error(`Bridge exited before ready (code=${code})`));
+    });
+
+    // Safety timeout
+    setTimeout(() => done(new Error("Bridge startup timed out after 15 s")), 15_000);
+  });
+}
+
+function killBridge() {
+  if (bridgeProcess) {
+    try { bridgeProcess.kill("SIGTERM"); } catch { /* ignore */ }
+    bridgeProcess = null;
+  }
+}
+
+// ─── Extension loading ────────────────────────────────────────────────────────
+
+async function loadResonantExtension() {
+  if (!existsSync(path.join(extRoot, "manifest.json"))) {
+    throw new Error(`Extension not found at: ${extRoot}`);
+  }
+  // allowFileAccess is required for file:// resources inside the extension
+  const ext = await session.defaultSession.loadExtension(extRoot, {
+    allowFileAccess: true,
+  });
+  extensionId = ext.id;
+  console.log(`[electron-pwa] Extension loaded — id: ${extensionId}`);
+  return extensionId;
+}
+
+// ─── Main window ─────────────────────────────────────────────────────────────
+
+async function createMainWindow(state) {
+  mainWindow = new BrowserWindow({
+    x: state.x,
+    y: state.y,
+    width: state.width,
+    height: state.height,
+    minWidth: 800,
+    minHeight: 600,
+    frame: false,
+    titleBarStyle: process.platform === "darwin" ? "hidden" : "default",
+    trafficLightPosition: { x: 14, y: 14 },
+    backgroundColor: "#111827",
+    show: false,
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false, // required for extensions
+      devTools: !app.isPackaged,
+    },
+  });
+
+  const workspaceUrl = `chrome-extension://${extensionId}/src/main-workspace.html`;
+  console.log(`[electron-pwa] Loading: ${workspaceUrl}`);
+  await mainWindow.loadURL(workspaceUrl);
+
+  mainWindow.once("ready-to-show", () => mainWindow.show());
+
+  // Minimize to tray on close
+  mainWindow.on("close", (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+      if (tray) tray.setToolTip("ResonantOS (running in tray)");
+    }
+  });
+
+  mainWindow.on("closed", () => { mainWindow = null; });
+
+  // Persist window state
+  const persist = () => saveWindowState(mainWindow);
+  mainWindow.on("resize", persist);
+  mainWindow.on("move", persist);
+}
+
+// ─── Side-panel window ────────────────────────────────────────────────────────
+
+async function openSidePanel() {
+  if (sidePanelWindow && !sidePanelWindow.isDestroyed()) {
+    sidePanelWindow.show();
+    sidePanelWindow.focus();
+    return;
+  }
+  sidePanelWindow = new BrowserWindow({
+    width: 420,
+    height: 760,
+    minWidth: 320,
+    title: "ResonantOS Side Panel",
+    frame: false,
+    titleBarStyle: process.platform === "darwin" ? "hidden" : "default",
+    trafficLightPosition: { x: 10, y: 10 },
+    backgroundColor: "#111827",
+    show: false,
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  });
+  await sidePanelWindow.loadURL(`chrome-extension://${extensionId}/src/side-panel.html`);
+  sidePanelWindow.once("ready-to-show", () => sidePanelWindow.show());
+  sidePanelWindow.on("closed", () => { sidePanelWindow = null; });
+}
+
+// ─── System tray ─────────────────────────────────────────────────────────────
+
+function createTray() {
+  const raw = nativeImage.createFromPath(trayIconPath);
+  const icon = raw.isEmpty() ? nativeImage.createEmpty() : raw.resize({ width: 16, height: 16 });
+
+  tray = new Tray(icon);
+  tray.setToolTip("ResonantOS");
+
+  const menu = Menu.buildFromTemplate([
+    {
+      label: "Show ResonantOS",
+      click: () => {
+        if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+      },
+    },
+    {
+      label: "Open Side Panel",
+      click: () => openSidePanel(),
+    },
+    { type: "separator" },
+    {
+      label: "Quit ResonantOS",
+      click: () => {
+        app.isQuitting = true;
+        killBridge();
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(menu);
+  tray.on("click", () => {
+    if (!mainWindow) return;
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+// ─── IPC handlers ────────────────────────────────────────────────────────────
+
+ipcMain.handle("resonantos-pwa:window-controls", (_event, action) => {
+  const win = BrowserWindow.getFocusedWindow() ?? mainWindow;
+  if (!win) return;
+  switch (action) {
+    case "minimize": win.minimize(); break;
+    case "maximize": win.isMaximized() ? win.unmaximize() : win.maximize(); break;
+    case "close":    win.hide(); break;
+    case "quit":
+      app.isQuitting = true;
+      killBridge();
+      app.quit();
+      break;
+  }
+});
+
+ipcMain.handle("resonantos-pwa:open-side-panel", () => openSidePanel());
+
+// ─── App lifecycle ────────────────────────────────────────────────────────────
+
+app.whenReady().then(async () => {
+  try {
+    // 1. Start bridge and wait for it to write the config
+    await startBridge();
+
+    // Belt-and-suspenders: ensure config file exists before loading extension
+    if (!existsSync(bridgeConfigPath)) {
+      throw new Error(`Bridge config not found at: ${bridgeConfigPath}`);
+    }
+
+    // 2. Load the extension (gives stable chrome-extension:// origin)
+    await loadResonantExtension();
+
+    // 3. Create the main window
+    const state = await loadWindowState();
+    await createMainWindow(state);
+
+    // 4. Create tray
+    createTray();
+
+    console.log("[electron-pwa] Ready.");
+  } catch (err) {
+    console.error("[electron-pwa] Startup failed:", err);
+    killBridge();
+    app.quit();
+  }
+});
+
+// On macOS, re-activate shows the window
+app.on("activate", () => {
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
+
+// Quit cleanly
+app.on("before-quit", () => {
+  app.isQuitting = true;
+  killBridge();
+});
+
+// Prevent default quit-on-all-closed so tray keeps app alive
+app.on("window-all-closed", () => {
+  // Intentionally empty — tray keeps app alive
+});
