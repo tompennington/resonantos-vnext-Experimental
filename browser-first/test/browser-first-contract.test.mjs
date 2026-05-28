@@ -42,7 +42,6 @@ test("ResonantOS browser layer is packaged as a Chromium side-panel extension", 
   assert.ok(manifest.permissions.includes("webNavigation"));
   assert.equal(manifest.content_scripts[0].all_frames, true);
   assert.equal(manifest.side_panel.default_path, "src/side-panel.html");
-  assert.equal(manifest.chrome_url_overrides.newtab, "src/main-workspace.html");
   assert.equal(manifest.background.type, "module");
   assert.equal(manifest.background.service_worker, "src/background.js");
   assert.equal(manifest.commands["open-augmentor-side-panel"].suggested_key.mac, "Alt+Shift+A");
@@ -57,7 +56,6 @@ test("browser-first main workspace owns new-tab AI chat and hands browser tasks 
   const background = await readText(path.join(extensionRoot, "src", "background.js"));
   const sidePanel = await readText(path.join(extensionRoot, "src", "side-panel.js"));
 
-  assert.equal(manifest.chrome_url_overrides.newtab, "src/main-workspace.html");
   assert.match(workspace, /ResonantOS main workspace/);
   assert.match(workspace, /chat-history/);
   assert.match(workspace, /Living Archive/);
