@@ -928,10 +928,20 @@ if (settingsClose && settingsOverlay) {
 if (settingsSave) {
   settingsSave.addEventListener("click", async () => {
     const openaiKey = document.getElementById("key-openai")?.value?.trim() ?? "";
+    const anthropicKey = document.getElementById("key-anthropic")?.value?.trim() ?? "";
+    const groqKey = document.getElementById("key-groq")?.value?.trim() ?? "";
+    const deepseekKey = document.getElementById("key-deepseek")?.value?.trim() ?? "";
+    const xaiKey = document.getElementById("key-xai")?.value?.trim() ?? "";
     const minimaxKey = document.getElementById("key-minimax")?.value?.trim() ?? "";
+    const runpodKey = document.getElementById("key-runpod")?.value?.trim() ?? "";
     const providers = {};
     if (openaiKey) providers["shared-openai"] = openaiKey;
+    if (anthropicKey) providers["shared-anthropic"] = anthropicKey;
+    if (groqKey) providers["shared-groq"] = groqKey;
+    if (deepseekKey) providers["shared-deepseek"] = deepseekKey;
+    if (xaiKey) providers["shared-xai"] = xaiKey;
     if (minimaxKey) providers["shared-minimax"] = minimaxKey;
+    if (runpodKey) providers["shared-runpod"] = runpodKey;
     try {
       await bridgeRequest("/providers/save", { method: "POST", body: { providers } });
       if (settingsStatus) { settingsStatus.textContent = "Saved ✓"; setTimeout(() => { settingsStatus.textContent = ""; }, 2000); }
