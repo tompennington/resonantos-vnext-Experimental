@@ -345,6 +345,12 @@ async function addMessage(role, content, options = {}) {
 }
 
 async function openSidebar() {
+  // Electron PWA: use IPC to open side panel window
+  if (window.resonantosElectronPWA?.openSidePanel) {
+    window.resonantosElectronPWA.openSidePanel();
+    return;
+  }
+  // Browser: use chrome.runtime message to open side panel
   await chrome.runtime.sendMessage({
     channel: "resonantos.browser_first",
     type: "open_side_panel"
@@ -475,17 +481,3 @@ thinkingDepthSelect.addEventListener("change", () => void chatSessionStore.persi
 await chatSessionStore.hydrate();
 renderAll();
 
-// === Pop Out — launch as standalone window ===
-const popoutBtn = document.getElementById("popout-btn");
-if (popoutBtn) {
-  popoutBtn.addEventListener("click", async () => {
-    // Electron PWA: use IPC to open side panel window
-    if (window.resonantosElectronPWA?.openSidePanel) {
-      window.resonantosElectronPWA.openSidePanel();
-      return;
-    }
-    // Browser fallback: open a popup window
-    const extUrl = chrome.runtime.getURL("src/main-workspace.html");
-    window.open(extUrl, "ResonantOS-Popout", "width=1400,height=900,menubar=no,toolbar=no,location=no,status=no");
-  });
-}

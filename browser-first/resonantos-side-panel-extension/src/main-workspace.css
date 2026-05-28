@@ -56,6 +56,7 @@ button {
   place-items: center;
   width: 34px;
   height: 34px;
+  -webkit-app-region: drag;
   border: 1px solid rgba(36, 209, 143, 0.26);
   border-radius: 11px;
   background: rgba(36, 209, 143, 0.1);
@@ -150,6 +151,14 @@ button {
   min-height: 56px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.055);
   position: relative;
+  -webkit-app-region: drag; /* allow window dragging from topbar */
+}
+
+.workspace-topbar button,
+.workspace-topbar nav,
+.workspace-topbar select,
+.workspace-topbar .topbar-actions {
+  -webkit-app-region: no-drag; /* buttons remain clickable */
 }
 
 .workspace-topbar nav {
