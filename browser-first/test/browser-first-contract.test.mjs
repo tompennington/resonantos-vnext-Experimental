@@ -42,9 +42,64 @@ test("ResonantOS browser layer is packaged as a Chromium side-panel extension", 
   assert.ok(manifest.permissions.includes("webNavigation"));
   assert.equal(manifest.content_scripts[0].all_frames, true);
   assert.equal(manifest.side_panel.default_path, "src/side-panel.html");
+  assert.equal(manifest.chrome_url_overrides.newtab, "src/main-workspace.html");
   assert.equal(manifest.background.type, "module");
   assert.equal(manifest.background.service_worker, "src/background.js");
   assert.equal(manifest.commands["open-augmentor-side-panel"].suggested_key.mac, "Alt+Shift+A");
+});
+
+test("browser-first main workspace owns new-tab AI chat and hands browser tasks to the sidebar", async () => {
+  const manifest = await readJson(path.join(extensionRoot, "manifest.json"));
+  const workspace = await readText(path.join(extensionRoot, "src", "main-workspace.html"));
+  const workspaceScript = await readText(path.join(extensionRoot, "src", "main-workspace.js"));
+  const workspaceStyles = await readText(path.join(extensionRoot, "src", "main-workspace.css"));
+  const launcher = await readText(path.join(browserFirstRoot, "host", "run-browser-first.mjs"));
+  const background = await readText(path.join(extensionRoot, "src", "background.js"));
+  const sidePanel = await readText(path.join(extensionRoot, "src", "side-panel.js"));
+
+  assert.equal(manifest.chrome_url_overrides.newtab, "src/main-workspace.html");
+  assert.match(workspace, /ResonantOS main workspace/);
+  assert.match(workspace, /chat-history/);
+  assert.match(workspace, /Living Archive/);
+  assert.match(workspace, /Hermes/);
+  assert.match(workspace, /OpenCode/);
+  assert.match(workspace, /mode-select/);
+  assert.match(workspace, /model-select/);
+  assert.match(workspace, /thinking-depth/);
+  assert.match(workspace, /Open Sidebar/);
+  assert.match(workspace, /main-workspace\.js/);
+  assert.match(workspaceScript, /createChatSessionStore/);
+  assert.match(workspaceScript, /\/augmentor\/chat/);
+  assert.match(workspaceScript, /response\?\.reply/);
+  assert.match(workspaceScript, /parseAutonomousBrowserActionIntent/);
+  assert.match(workspaceScript, /parseNaturalBrowserIntent/);
+  assert.match(workspaceScript, /augmentorPendingSidebarPrompt/);
+  assert.match(workspaceScript, /open_side_panel/);
+  assert.match(workspaceScript, /chrome\.tabs\.update/);
+  assert.match(workspaceScript, /commandForm\.requestSubmit\(\)/);
+  assert.match(workspaceScript, /renderHermesWorkspace/);
+  assert.match(workspaceScript, /document\.body\.dataset\.workspace/);
+  assert.match(workspaceScript, /\/addons\/status/);
+  assert.match(workspaceScript, /\/hermes\/dashboard\/status/);
+  assert.match(workspaceScript, /\/hermes\/dashboard\/start/);
+  assert.match(workspaceScript, /\/hermes\/dashboard\/stop/);
+  assert.match(workspaceScript, /\/addons\/delegate/);
+  assert.match(workspaceScript, /target: "hermes"/);
+  assert.match(workspaceScript, /parseHermesSlashCommand/);
+  assert.match(workspaceScript, /iframe\.src = dashboard\.url/);
+  assert.match(workspaceStyles, /workspace-shell/);
+  assert.match(workspaceStyles, /answer-workspace/);
+  assert.match(workspaceStyles, /module-workspace/);
+  assert.match(workspaceStyles, /dashboard-frame-card/);
+  assert.match(launcher, /defaultMainWorkspaceUrl/);
+  assert.match(launcher, /\/hermes\/dashboard\/status/);
+  assert.match(launcher, /\/hermes\/dashboard\/start/);
+  assert.match(launcher, /\/hermes\/dashboard\/stop/);
+  assert.match(launcher, /Hermes dashboard can only bind to localhost/);
+  assert.match(launcher, /main-workspace\.html/);
+  assert.match(background, /open_side_panel/);
+  assert.match(sidePanel, /consumePendingSidebarPrompt/);
+  assert.match(sidePanel, /chrome\.storage\?\.onChanged/);
 });
 
 test("browser layer has a human approval boundary for wallet and credential actions", async () => {
@@ -88,6 +143,8 @@ test("browser layer exposes Augmentor chat as the side-panel surface without ste
   const background = await readText(path.join(extensionRoot, "src", "background.js"));
 
   assert.match(panel, /Message Augmentor/);
+  assert.match(panel, /new-chat/);
+  assert.match(panel, /chat-history/);
   assert.match(panel, /bridge-config\.generated\.js/);
   assert.match(panel, /control-monitor/);
   assert.match(panel, /context-dock"[^>]+hidden/);
@@ -128,6 +185,9 @@ test("browser layer exposes Augmentor chat as the side-panel surface without ste
   assert.match(messageActionController, /regenerateFromMessage/);
   assert.match(messageActionController, /attachFiles/);
   assert.match(chatSessionStore, /forkFromMessage/);
+  assert.match(chatSessionStore, /createSession/);
+  assert.match(chatSessionStore, /switchSession/);
+  assert.match(chatSessionStore, /getSessions/);
   assert.match(chatSessionStore, /trimToPreviousUserMessage/);
   assert.match(chatSessionStore, /addAttachments/);
   assert.match(chatSessionStore, /hydrate/);
@@ -139,9 +199,11 @@ test("browser layer exposes Augmentor chat as the side-panel surface without ste
   assert.match(appCommandHandlers, /pauseBrowserJob/);
   assert.match(script, /createSidePanelCommandRouter/);
   assert.match(commandRouter, /respondToCommand/);
+  assert.match(commandRouter, /name === "hermes"/);
   assert.match(commandRouter, /parseControlIntent/);
   assert.match(commandRouter, /handleWalletBoundary/);
   assert.match(sidePanelRenderers, /renderMessages/);
+  assert.match(sidePanelRenderers, /What should Augmentor work on/);
   assert.match(sidePanelRenderers, /renderAttachments/);
   assert.match(sidePanelRenderers, /flashCopied/);
   assert.match(script, /createSitePermissionStore/);
@@ -284,7 +346,16 @@ test("browser layer can read active tab context without raw privileged access", 
   assert.match(content, /type_text/);
   assert.match(content, /resonantos-control-overlay/);
   assert.match(content, /control_overlay/);
+  assert.match(content, /controlPhaseDetails/);
+  assert.match(content, /ros-control-status-text/);
+  assert.match(content, /ros-control-stop-button/);
+  assert.match(content, /cancel_control_run/);
+  assert.match(content, /Reading page\.\.\./);
+  assert.match(content, /Typing\.\.\./);
+  assert.match(content, /Taking screenshot\.\.\.|Clicking\.\.\.|Working\.\.\./);
   assert.match(content, /setControlSessionOverlay/);
+  assert.match(content, /isTopWindow/);
+  assert.match(content, /phase: message\.phase/);
   assert.match(content, /data-session="active"/);
   assert.match(content, /pulseControlOverlay/);
   assert.match(content, /resonantos-control-target/);
@@ -313,6 +384,7 @@ test("browser layer can read active tab context without raw privileged access", 
   assert.match(content, /document\.body\?\.innerText/);
   assert.match(content, /phantomSolana/);
   assert.match(pageActions, /chrome\.tabs\.sendMessage/);
+  assert.match(pageActions, /phase/);
   assert.match(pageActions, /chrome\.scripting/);
   assert.match(pageActions, /executeScript/);
   assert.match(pageActions, /chrome\.webNavigation/);

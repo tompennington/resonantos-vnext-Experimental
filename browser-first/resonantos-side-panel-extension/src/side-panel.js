@@ -22,6 +22,8 @@ import { createSitePermissionStore } from "./lib/site-permission-store.js";
 import { createTabContextController } from "./lib/tab-context-controller.js";
 
 const readButton = document.querySelector("#read-page");
+const newChatButton = document.querySelector("#new-chat");
+const chatHistory = document.querySelector("#chat-history");
 const attachFileButton = document.querySelector("#attach-file");
 const fileInput = document.querySelector("#file-input");
 const attachmentStrip = document.querySelector("#attachment-strip");
@@ -85,6 +87,9 @@ const bridgeRequest = createBridgeClient();
 const STORAGE_KEYS = {
   messages: "augmentorBrowserMessages",
   forks: "augmentorBrowserForks",
+  sessions: "augmentorBrowserSessions",
+  activeSessionId: "augmentorActiveBrowserSessionId",
+  pendingSidebarPrompt: "augmentorPendingSidebarPrompt",
   model: "augmentorModel",
   thinkingDepth: "augmentorThinkingDepth",
   attachments: "augmentorBrowserAttachments",
@@ -198,6 +203,35 @@ const updateConnectionLine = () => {
   connectionLine.textContent = `Connected to ${model} · ${statusLabel}`;
 };
 
+const renderChatHistory = () => {
+  chatHistory.replaceChildren();
+  chatSessionStore.getSessions().forEach((session) => {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = session.title || "New chat";
+    button.title = session.title || "New chat";
+    button.dataset.sessionId = session.id;
+    if (session.id === chatSessionStore.getActiveSessionId()) {
+      button.setAttribute("aria-current", "true");
+    }
+    button.addEventListener("click", async () => {
+      if (session.id === chatSessionStore.getActiveSessionId()) return;
+      await chatSessionStore.switchSession(session.id);
+      lastSnapshot = null;
+      currentControlRun = null;
+      pendingApproval = null;
+      renderMessages();
+      renderAttachments();
+      renderChatHistory();
+      renderControlMonitor();
+      setStatus("Ready");
+    });
+    item.append(button);
+    chatHistory.append(item);
+  });
+};
+
 const setContextMeter = (snapshot) => {
   const textLength = snapshot?.text?.length ?? 0;
   const roughPercent = Math.min(99, Math.max(0, Math.round(textLength / 900)));
@@ -257,10 +291,19 @@ const {
     renderAttachments();
   },
   onCopyMessage: (id) => messageActions.copyMessage(id),
-  onDeleteMessage: (id) => messageActions.deleteMessage(id),
+  onDeleteMessage: async (id) => {
+    await messageActions.deleteMessage(id);
+    renderChatHistory();
+  },
   onEditMessage: (id) => messageActions.editMessage(id),
-  onForkMessage: (id) => messageActions.forkFromMessage(id),
-  onRegenerateMessage: (id) => messageActions.regenerateFromMessage(id),
+  onForkMessage: async (id) => {
+    await messageActions.forkFromMessage(id);
+    renderChatHistory();
+  },
+  onRegenerateMessage: async (id) => {
+    await messageActions.regenerateFromMessage(id);
+    renderChatHistory();
+  },
   onSaveMessageToArchive: (id) => messageActions.saveMessageToArchive(id),
   onShowMessageStats: (id) => messageActions.showMessageStats(id),
   scrollTranscriptToBottom,
@@ -271,6 +314,7 @@ const addMessage = async (role, content, { persist = true, usage = null } = {}) 
   const message = await chatSessionStore.addMessage(role, content, { persist, usage });
   if (!message) return null;
   renderMessages();
+  renderChatHistory();
   return message;
 };
 
@@ -511,6 +555,7 @@ const agentControlRunner = createAgentControlRunner({
   requestNextControlAction,
   saveControlReportToArchive,
   setActivity,
+  setPageControlOverlay,
   setPendingApproval: (approval) => {
     pendingApproval = approval;
   },
@@ -690,13 +735,73 @@ const commandRouter = createSidePanelCommandRouter({
 
 const respondToCommand = commandRouter.respondToCommand;
 
+chrome.runtime?.onMessage?.addListener?.((message, _sender, sendResponse) => {
+  if (!message || message.channel !== "resonantos.browser_first.side_panel") {
+    return false;
+  }
+  if (message.type === "cancel_control_run") {
+    void cancelBrowserJob(currentControlRun?.id ?? browserJobStore.getActiveJobId() ?? "").then(() => {
+      sendResponse({ ok: true });
+    }).catch((error) => {
+      sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) });
+    });
+    return true;
+  }
+  return false;
+});
+
 const hydrateChatSettings = async () => {
   await chatSessionStore.hydrate();
   renderMessages();
   renderAttachments();
+  renderChatHistory();
   updateConnectionLine();
 };
 
+const consumePendingSidebarPrompt = async () => {
+  const payload = await chrome.storage?.local?.get?.(STORAGE_KEYS.pendingSidebarPrompt).catch(() => ({}));
+  const pending = payload?.[STORAGE_KEYS.pendingSidebarPrompt];
+  const prompt = String(pending?.prompt ?? "").trim();
+  if (!prompt) return;
+  if (turnBusy) return;
+  await chrome.storage.local.remove(STORAGE_KEYS.pendingSidebarPrompt).catch(() => undefined);
+  setTurnBusy(true);
+  try {
+    await addMessage("user", prompt);
+    await respondToCommand(prompt);
+  } finally {
+    setTurnBusy(false);
+  }
+};
+
+chrome.storage?.onChanged?.addListener?.((changes, areaName) => {
+  if (areaName !== "local" || !changes[STORAGE_KEYS.pendingSidebarPrompt]?.newValue) {
+    return;
+  }
+  void consumePendingSidebarPrompt();
+});
+
+newChatButton.addEventListener("click", async () => {
+  await chatSessionStore.createSession();
+  lastSnapshot = null;
+  currentControlRun = null;
+  pendingApproval = null;
+  contextDockExpanded = false;
+  commandInput.value = "";
+  composerController.resetUndoStack("");
+  renderMessages();
+  renderAttachments();
+  renderChatHistory();
+  renderControlMonitor();
+  clearActivity();
+  setStatus("Ready");
+  commandInput.focus();
+});
+transcript.addEventListener("resonantos:use-prompt", (event) => {
+  commandInput.value = event.detail?.prompt ?? "";
+  commandInput.dispatchEvent(new Event("input", { bubbles: true }));
+  commandInput.focus();
+});
 attachFileButton.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", () => void messageActions.attachFiles(fileInput.files));
 readButton.addEventListener("click", () => void readActivePage());
@@ -768,6 +873,7 @@ welcomeCard.innerHTML = `
 hydrateChatSettings().then(async () => {
   await loadBrowserJobs();
   await tabContextController.hydrateInitialContext();
+  await consumePendingSidebarPrompt();
   // Show welcome card if no existing messages
   if (chatSessionStore.getMessages().length === 0 && transcript) {
     transcript.prepend(welcomeCard);
