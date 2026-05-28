@@ -111,6 +111,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
+  if (sender.id !== chrome.runtime.id) {
+    sendResponse({ ok: false, error: "Unauthorized sender" });
+    return true;
+  }
+
   if (message.type === "active_tab_context") {
     sendResponse({
       ok: true,

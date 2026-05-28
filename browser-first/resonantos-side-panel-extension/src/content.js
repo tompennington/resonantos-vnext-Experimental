@@ -76,7 +76,10 @@ const sanitizePageText = (raw) => {
   return text;
 };
 
-const detectInjection = (text) => INJECTION_PATTERNS.some((pattern) => pattern.test(text));
+const detectInjection = (text) => {
+  const normalized = String(text ?? "").normalize("NFKC").replace(/[\u200B-\u200F\u2028-\u202F\uFEFF]/g, "");
+  return INJECTION_PATTERNS.some((pattern) => pattern.test(normalized));
+};
 
 const logSecurityEvent = (event) => {
   const entry = { ts: new Date().toISOString(), url: location.href, ...event };
@@ -118,7 +121,7 @@ const pageSnapshot = () => {
     isTop: isTopWindow(),
     referrer: document.referrer || ""
   },
-  text: rawText.slice(0, 12000),
+  text: sanitizePageText(rawText).slice(0, 12000),
   iframes: Array.from(document.querySelectorAll("iframe"))
     .slice(0, 20)
     .map((frame) => ({
@@ -827,7 +830,7 @@ const runInlineAction = async (action) => {
         action,
         prompt,
         selection,
-        pageContext: `${document.title}\n${location.href}\n${document.body?.innerText?.slice(0, 3000) ?? ""}`
+        pageContext: `${document.title}\n${location.href}\n${sanitizePageText(document.body?.innerText ?? "").slice(0, 3000)}`
       })
     });
     const payload = await response.json();

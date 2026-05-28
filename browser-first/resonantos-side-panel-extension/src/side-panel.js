@@ -761,7 +761,9 @@ const hydrateChatSettings = async () => {
 const consumePendingSidebarPrompt = async () => {
   const payload = await chrome.storage?.local?.get?.(STORAGE_KEYS.pendingSidebarPrompt).catch(() => ({}));
   const pending = payload?.[STORAGE_KEYS.pendingSidebarPrompt];
-  const prompt = String(pending?.prompt ?? "").trim();
+  const rawPrompt = String(pending?.prompt ?? "").trim();
+  // Strip control characters and Unicode tricks before submission
+  const prompt = rawPrompt.normalize("NFKC").replace(/[\x00-\x1f\x7f\u200B-\u200F\u2028-\u202F\uFEFF]/g, "").trim();
   if (!prompt) return;
   if (turnBusy) return;
   await chrome.storage.local.remove(STORAGE_KEYS.pendingSidebarPrompt).catch(() => undefined);

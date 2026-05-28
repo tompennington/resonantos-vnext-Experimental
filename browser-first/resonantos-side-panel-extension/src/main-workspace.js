@@ -252,6 +252,7 @@ function renderHermesWorkspace() {
   frameCard.className = "dashboard-frame-card";
   const iframe = document.createElement("iframe");
   iframe.title = "Hermes dashboard";
+  iframe.sandbox = "allow-scripts allow-same-origin allow-forms";
   iframe.hidden = true;
   const placeholder = document.createElement("div");
   placeholder.className = "dashboard-placeholder";
