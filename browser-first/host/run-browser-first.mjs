@@ -1300,7 +1300,7 @@ async function executeLaunchElectron() {
   if (electronProcess && !electronProcess.killed) {
     return { ok: true, status: "already-running" };
   }
-  const electronMain = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "electron-pwa", "main.mjs");
+  const electronMain = path.join(repoRoot, "electron-pwa", "main.mjs");
   if (!existsSync(electronMain)) {
     return { ok: false, error: "Electron PWA not found at " + electronMain };
   }
