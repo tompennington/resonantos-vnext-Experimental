@@ -132,6 +132,48 @@ const loadShieldData = async () => {
 };
 
 // ---------------------------------------------------------------------------
+// Security event log from chrome.storage.local (written by content.js logSecurityEvent)
+// ---------------------------------------------------------------------------
+const securityLogEl = document.getElementById("shield-security-log");
+
+const renderSecurityLog = (entries) => {
+  if (!securityLogEl) return;
+  if (!entries || !entries.length) {
+    securityLogEl.innerHTML = '<p class="sidecar-placeholder">No security events recorded.</p>';
+    return;
+  }
+  securityLogEl.innerHTML = entries
+    .slice()
+    .reverse()
+    .map((e) =>
+      `<div class="shield-event-row">
+        <span class="shield-event-type shield-event-type-${escapeHtml(e.type ?? "info")}">${escapeHtml(e.type ?? "info")}</span>
+        <span class="shield-event-msg">${escapeHtml(e.detail ?? e.text?.slice(0, 120) ?? "")}</span>
+        <span class="shield-event-url">${escapeHtml((e.url ?? "").replace(/^https?:\/\//, "").slice(0, 60))}</span>
+        <span class="shield-event-time">${escapeHtml(e.ts ?? "")}</span>
+      </div>`
+    )
+    .join("");
+};
+
+const loadSecurityLog = async () => {
+  try {
+    const result = await chrome.storage.local.get("securityLog");
+    renderSecurityLog(result.securityLog ?? []);
+  } catch (err) {
+    if (securityLogEl) securityLogEl.innerHTML = `<p class="sidecar-placeholder">Could not read security log: ${escapeHtml(String(err))}</p>`;
+  }
+};
+
+// Live updates: re-render whenever securityLog changes
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.securityLog) {
+    renderSecurityLog(changes.securityLog.newValue ?? []);
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 loadShieldData();
+loadSecurityLog();
