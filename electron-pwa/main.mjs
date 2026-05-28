@@ -11,6 +11,7 @@
 
 import {
   app,
+  BrowserView,
   BrowserWindow,
   ipcMain,
   Menu,
@@ -39,7 +40,9 @@ const preloadPath = path.join(__dirname, "preload.mjs");
 // ─── State ────────────────────────────────────────────────────────────────────
 
 let mainWindow = null;
-let sidePanelWindow = null;
+let sidePanelView = null;
+let sidePanelVisible = false;
+const SIDE_PANEL_WIDTH = 420;
 let tray = null;
 let bridgeProcess = null;
 let extensionId = null;
@@ -221,39 +224,54 @@ async function createMainWindow(state) {
 
   // Persist window state
   const persist = () => saveWindowState(mainWindow);
-  mainWindow.on("resize", persist);
+  mainWindow.on("resize", () => { persist(); layoutSidePanel(); });
   mainWindow.on("move", persist);
 }
 
-// ─── Side-panel window ────────────────────────────────────────────────────────
+// ─── Side panel (docked right inside main window) ────────────────────────────
+
+function layoutSidePanel() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const [winW, winH] = mainWindow.getContentSize();
+  if (sidePanelVisible && sidePanelView) {
+    // Main content gets left portion, side panel gets right
+    mainWindow.webContents.executeJavaScript(
+      `document.body.style.marginRight = '${SIDE_PANEL_WIDTH}px'`
+    ).catch(() => {});
+    sidePanelView.setBounds({ x: winW - SIDE_PANEL_WIDTH, y: 0, width: SIDE_PANEL_WIDTH, height: winH });
+  } else {
+    mainWindow.webContents.executeJavaScript(
+      `document.body.style.marginRight = '0'`
+    ).catch(() => {});
+  }
+}
 
 async function openSidePanel() {
-  if (sidePanelWindow && !sidePanelWindow.isDestroyed()) {
-    sidePanelWindow.show();
-    sidePanelWindow.focus();
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  
+  if (sidePanelVisible && sidePanelView) {
+    // Toggle off
+    mainWindow.removeBrowserView(sidePanelView);
+    sidePanelVisible = false;
+    layoutSidePanel();
     return;
   }
-  sidePanelWindow = new BrowserWindow({
-    icon: nativeImage.createFromPath(appIconPath),
-    width: 420,
-    height: 760,
-    minWidth: 320,
-    title: "ResonantOS Side Panel",
-    frame: false,
-    titleBarStyle: process.platform === "darwin" ? "hidden" : "default",
-    trafficLightPosition: { x: 10, y: 10 },
-    backgroundColor: "#111827",
-    show: false,
-    webPreferences: {
-      preload: preloadPath,
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-    },
-  });
-  await sidePanelWindow.loadURL(`chrome-extension://${extensionId}/src/side-panel.html`);
-  sidePanelWindow.once("ready-to-show", () => sidePanelWindow.show());
-  sidePanelWindow.on("closed", () => { sidePanelWindow = null; });
+  
+  if (!sidePanelView) {
+    sidePanelView = new BrowserView({
+      webPreferences: {
+        preload: preloadPath,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false,
+      },
+    });
+    await sidePanelView.webContents.loadURL(`chrome-extension://${extensionId}/src/side-panel.html`);
+  }
+  
+  mainWindow.addBrowserView(sidePanelView);
+  sidePanelVisible = true;
+  layoutSidePanel();
 }
 
 // ─── System tray ─────────────────────────────────────────────────────────────
