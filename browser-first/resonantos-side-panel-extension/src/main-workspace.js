@@ -474,3 +474,17 @@ thinkingDepthSelect.addEventListener("change", () => void chatSessionStore.persi
 
 await chatSessionStore.hydrate();
 renderAll();
+
+// === Pop Out — launch as standalone window ===
+const popoutBtn = document.getElementById("popout-btn");
+if (popoutBtn) {
+  popoutBtn.addEventListener("click", async () => {
+    if (window.resonantOS?.openPopout) {
+      window.resonantOS.openPopout();
+      return;
+    }
+    // Browser: open a new popup window with this same page
+    const extUrl = chrome.runtime.getURL("src/main-workspace.html");
+    window.open(extUrl, "ResonantOS-Popout", "width=1400,height=900,menubar=no,toolbar=no,location=no,status=no");
+  });
+}

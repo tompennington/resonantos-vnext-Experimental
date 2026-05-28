@@ -1025,3 +1025,18 @@ if (copyMobileUrl) {
     setTimeout(() => { copyMobileUrl.textContent = "Copy URL"; }, 1500);
   });
 }
+
+// === Pop Out — launch as desktop window or browser popup ===
+const popoutBtn = document.getElementById("popout-btn");
+if (popoutBtn) {
+  popoutBtn.addEventListener("click", async () => {
+    // If inside Electron, use IPC to open a new window
+    if (window.resonantOS?.openPopout) {
+      window.resonantOS.openPopout();
+      return;
+    }
+    // Browser fallback: open main workspace as a popup window (PWA-style)
+    const extUrl = chrome.runtime.getURL("src/main-workspace.html");
+    window.open(extUrl, "ResonantOS", "width=1400,height=900,menubar=no,toolbar=no,location=no,status=no");
+  });
+}

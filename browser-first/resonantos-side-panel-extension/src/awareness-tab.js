@@ -128,3 +128,18 @@ const refreshContext = async () => {
 // Event listeners
 // ---------------------------------------------------------------------------
 if (awRefreshBtn) awRefreshBtn.addEventListener("click", () => void refreshContext());
+
+// ---------------------------------------------------------------------------
+// Close tab button — uses chrome.tabs API (window.close blocked on non-script-opened tabs)
+// ---------------------------------------------------------------------------
+const closeTabBtn = document.getElementById("close-tab-btn");
+if (closeTabBtn) {
+  closeTabBtn.addEventListener("click", async () => {
+    try {
+      const tab = await chrome.tabs.getCurrent();
+      if (tab?.id) await chrome.tabs.remove(tab.id);
+    } catch {
+      window.close(); // fallback
+    }
+  });
+}
