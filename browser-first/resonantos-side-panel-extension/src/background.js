@@ -15,6 +15,10 @@ const WALLET_ACTIONS = new Set([
 
 const BRIDGE_URL = "http://127.0.0.1:47773";
 
+// Track whether the side panel is currently open.
+// Updated via port connection from side-panel.js (name: "side-panel").
+let sidePanelOpen = false;
+
 /**
  * logWalletActionToBridge — sends a wallet audit entry to the host bridge.
  * Fire-and-forget: failures are logged to console only.
@@ -32,7 +36,29 @@ const openResonantSidePanel = async (windowId) => {
     return;
   }
   await chrome.sidePanel.open({ windowId }).catch(() => undefined);
+  // Mark panel as open; port disconnect from side-panel.js will clear this.
+  sidePanelOpen = true;
 };
+
+// When the side panel loads it connects a port named "side-panel".
+// Port disconnect fires when the panel is closed, letting us clear the flag.
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== "side-panel") return;
+  sidePanelOpen = true;
+  port.onDisconnect.addListener(() => {
+    sidePanelOpen = false;
+  });
+});
+
+// Redirect new tabs to the main workspace while the side panel is open.
+chrome.tabs.onCreated.addListener((tab) => {
+  if (!sidePanelOpen) return;
+  const pending = tab.pendingUrl ?? tab.url ?? "";
+  if (pending === "chrome://newtab/" || pending === "about:blank" || pending === "") {
+    const workspaceUrl = chrome.runtime.getURL("src/main-workspace.html");
+    chrome.tabs.update(tab.id, { url: workspaceUrl });
+  }
+});
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined);

@@ -21,6 +21,11 @@ import { createSidePanelRenderers } from "./lib/side-panel-renderers.js";
 import { createSitePermissionStore } from "./lib/site-permission-store.js";
 import { createTabContextController } from "./lib/tab-context-controller.js";
 
+// Notify background.js that the side panel is open. The port disconnect fires
+// automatically when this page unloads (panel closed), letting background.js
+// clear the sidePanelOpen flag and stop redirecting new tabs.
+chrome.runtime.connect({ name: "side-panel" });
+
 const readButton = document.querySelector("#read-page");
 const newChatButton = document.querySelector("#new-chat");
 const chatHistory = document.querySelector("#chat-history");
