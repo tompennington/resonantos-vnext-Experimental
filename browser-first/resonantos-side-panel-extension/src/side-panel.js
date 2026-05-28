@@ -974,24 +974,20 @@ if (themeToggleSettings) {
   });
 }
 
-// === Sidecar tab openers (Electron: open inside shell / Browser: open as tabs) ===
+// === Sidecar tab openers (Electron: open inside shell / Browser: popup windows) ===
 const openSidecarPage = async (filename) => {
-  // Electron PWA: open inside the main window
-  if (window.resonantosElectronPWA?.openSidecarTab) {
-    window.resonantosElectronPWA.openSidecarTab(filename);
-    return;
+  try {
+    // Electron PWA: open inside the main window
+    if (window.resonantosElectronPWA?.openSidecarTab) {
+      window.resonantosElectronPWA.openSidecarTab(filename);
+      return;
+    }
+    // Browser: open as popup window (NOT chrome.tabs.create which kills side panel)
+    const url = chrome.runtime.getURL(`src/${filename}`);
+    chrome.windows.create({ type: "popup", url, width: 1080, height: 800 });
+  } catch (err) {
+    console.warn("[ResonantOS] sidecar open failed:", err);
   }
-  // Browser fallback: open as Chrome tab
-  const tabs = await chrome.tabs.query({});
-  const existing = tabs.find(t => t.url?.includes(filename));
-  if (existing) { await chrome.tabs.update(existing.id, { active: true }).catch(() => undefined); return; }
-  const url = chrome.runtime.getURL(`src/${filename}`);
-  // Use a popup window instead of a new tab: chrome.tabs.create() activates the new
-  // tab, which suspends the side panel's JS context for the original tab. When the
-  // user closes the sidecar tab Chrome switches back and the side panel's event
-  // listeners are gone. A popup window opens independently and never disturbs the
-  // side panel's tab context.
-  await chrome.windows.create({ type: "popup", url, width: 1080, height: 800 });
 };
 
 if (openStoreBtn) openStoreBtn.addEventListener("click", () => void openSidecarPage("protocol-store.html"));
@@ -1021,7 +1017,9 @@ if (popoutBtn) {
     try {
       await bridgeRequest("/launch-electron", { method: "POST" });
       return;
-    } catch {}
+    } catch (err) {
+      console.warn("[ResonantOS] launch-electron failed:", err);
+    }
     // Fallback: tell user how to launch
     const msg = "To launch the desktop app, run in Terminal:\n\ncd ~/resonantos-vnext\nRES0NANTOS_ALPHA_KEY=\"your-key\" npx electron electron-pwa/main.mjs";
     alert(msg);
