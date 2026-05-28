@@ -130,16 +130,22 @@ const refreshContext = async () => {
 if (awRefreshBtn) awRefreshBtn.addEventListener("click", () => void refreshContext());
 
 // ---------------------------------------------------------------------------
-// Close tab button — uses chrome.tabs API (window.close blocked on non-script-opened tabs)
+// Close tab button — Electron: IPC to remove BrowserView / Browser: chrome.tabs
 // ---------------------------------------------------------------------------
 const closeTabBtn = document.getElementById("close-tab-btn");
 if (closeTabBtn) {
   closeTabBtn.addEventListener("click", async () => {
+    // Electron PWA: close sidecar and return to main workspace
+    if (window.resonantosElectronPWA?.closeSidecarTab) {
+      window.resonantosElectronPWA.closeSidecarTab();
+      return;
+    }
+    // Browser fallback
     try {
       const tab = await chrome.tabs.getCurrent();
       if (tab?.id) await chrome.tabs.remove(tab.id);
     } catch {
-      window.close(); // fallback
+      window.close();
     }
   });
 }

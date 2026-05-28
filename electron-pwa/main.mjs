@@ -330,6 +330,15 @@ async function openSidecarTab(pagePath) {
   sidecarView.setBounds({ x: 0, y: 0, width: winW - spWidth, height: winH });
 }
 
+function closeSidecarTab() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (sidecarActive && sidecarView) {
+    mainWindow.removeBrowserView(sidecarView);
+    sidecarActive = false;
+  }
+  mainWindow.webContents.executeJavaScript(`document.body.style.display = ''`).catch(() => {});
+}
+
 // Resize side panel via IPC (drag handle in renderer)
 function resizeSidePanel(newWidth) {
   sidePanelWidth = Math.max(SIDE_PANEL_MIN_WIDTH, Math.min(SIDE_PANEL_MAX_WIDTH, newWidth));
@@ -398,6 +407,7 @@ ipcMain.handle("resonantos-pwa:window-controls", (_event, action) => {
 
 ipcMain.handle("resonantos-pwa:open-side-panel", () => openSidePanel());
 ipcMain.handle("resonantos-pwa:open-sidecar-tab", (_e, pagePath) => openSidecarTab(pagePath));
+ipcMain.handle("resonantos-pwa:close-sidecar-tab", () => closeSidecarTab());
 ipcMain.handle("resonantos-pwa:resize-side-panel", (_e, width) => resizeSidePanel(width));
 ipcMain.handle("resonantos-pwa:get-side-panel-state", () => ({ visible: sidePanelVisible, width: sidePanelWidth }));
 

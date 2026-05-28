@@ -37,4 +37,8 @@ contextBridge.exposeInMainWorld("resonantosElectronPWA", {
   /** Open a sidecar tab inside the main window */
   openSidecarTab: (pagePath) =>
     ipcRenderer.invoke("resonantos-pwa:open-sidecar-tab", pagePath),
+
+  /** Close the current sidecar tab and return to main workspace */
+  closeSidecarTab: () =>
+    ipcRenderer.invoke("resonantos-pwa:close-sidecar-tab"),
 });
