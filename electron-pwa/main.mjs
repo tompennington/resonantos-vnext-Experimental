@@ -297,7 +297,6 @@ async function openSidecarTab(pagePath) {
     if (currentUrl === targetUrl) {
       mainWindow.removeBrowserView(sidecarView);
       sidecarActive = false;
-      mainWindow.webContents.executeJavaScript(`document.body.style.display = ''`).catch(() => {});
       return;
     }
   }
@@ -316,8 +315,7 @@ async function openSidecarTab(pagePath) {
 
   await sidecarView.webContents.loadURL(targetUrl);
 
-  // Hide main content, show sidecar full-width (minus side panel if open)
-  mainWindow.webContents.executeJavaScript(`document.body.style.display = 'none'`).catch(() => {});
+  // Sidecar BrowserView overlays the main content (no need to hide it)
 
   if (!sidecarActive) {
     mainWindow.addBrowserView(sidecarView);
@@ -336,7 +334,6 @@ function closeSidecarTab() {
     mainWindow.removeBrowserView(sidecarView);
     sidecarActive = false;
   }
-  mainWindow.webContents.executeJavaScript(`document.body.style.display = ''`).catch(() => {});
 }
 
 // Resize side panel via IPC (drag handle in renderer)
