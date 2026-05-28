@@ -299,9 +299,12 @@ async function openSidecarTab(pagePath) {
       sidecarView.webContents.destroy();
       sidecarView = null;
       sidecarActive = false;
-      // Re-focus side panel
-      if (sidePanelVisible && sidePanelView) {
-        mainWindow.setTopBrowserView(sidePanelView);
+      // Re-establish side panel input (same fix as closeSidecarTab)
+      if (sidePanelVisible && sidePanelView && !sidePanelView.webContents.isDestroyed()) {
+        mainWindow.removeBrowserView(sidePanelView);
+        mainWindow.addBrowserView(sidePanelView);
+        layoutSidePanel();
+        sidePanelView.webContents.focus();
       }
       return;
     }
@@ -342,9 +345,15 @@ function closeSidecarTab() {
     sidecarView = null;
     sidecarActive = false;
   }
-  // Re-focus the side panel so its buttons work
-  if (sidePanelVisible && sidePanelView) {
-    mainWindow.setTopBrowserView(sidePanelView);
+  // Re-establish side panel input after sidecar removal.
+  // setTopBrowserView alone is insufficient — the BrowserView z-order
+  // may not fully recover after destruction. Remove + re-add forces
+  // a clean z-order refresh, then explicit focus restores input.
+  if (sidePanelVisible && sidePanelView && !sidePanelView.webContents.isDestroyed()) {
+    mainWindow.removeBrowserView(sidePanelView);
+    mainWindow.addBrowserView(sidePanelView);
+    layoutSidePanel(); // reapply correct bounds after re-add
+    sidePanelView.webContents.focus();
   }
 }
 
@@ -435,11 +444,26 @@ app.whenReady().then(async () => {
     // 2. Load the extension (gives stable chrome-extension:// origin)
     await loadResonantExtension();
 
-    // 3. Create the main window
+    // 3. Set dock icon on macOS (BrowserWindow({ icon }) does NOT set the dock
+    //    icon — must be done programmatically via app.dock.setIcon())
+    if (process.platform === "darwin" && app.dock) {
+      console.log(`[electron-pwa] appIconPath = ${appIconPath}`);
+      console.log(`[electron-pwa] icon exists = ${existsSync(appIconPath)}`);
+      const dockIcon = nativeImage.createFromPath(appIconPath);
+      console.log(`[electron-pwa] dockIcon.isEmpty = ${dockIcon.isEmpty()}`);
+      if (!dockIcon.isEmpty()) {
+        app.dock.setIcon(dockIcon);
+        console.log("[electron-pwa] Dock icon set.");
+      } else {
+        console.warn("[electron-pwa] Warning: dock icon image is empty — check path.");
+      }
+    }
+
+    // 4. Create the main window
     const state = await loadWindowState();
     await createMainWindow(state);
 
-    // 4. Create tray
+    // 5. Create tray
     createTray();
 
     console.log("[electron-pwa] Ready.");
