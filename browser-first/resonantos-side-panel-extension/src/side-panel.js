@@ -982,9 +982,9 @@ const openSidecarPage = async (filename) => {
       window.resonantosElectronPWA.openSidecarTab(filename);
       return;
     }
-    // Browser: open as popup window (NOT chrome.tabs.create which kills side panel)
+    // Browser: open as a background tab (active:false keeps the side panel alive)
     const url = chrome.runtime.getURL(`src/${filename}`);
-    chrome.windows.create({ type: "popup", url, width: 1080, height: 800 });
+    chrome.tabs.create({ url, active: false });
   } catch (err) {
     console.warn("[ResonantOS] sidecar open failed:", err);
   }
