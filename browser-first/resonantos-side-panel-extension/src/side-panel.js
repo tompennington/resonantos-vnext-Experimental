@@ -1031,8 +1031,9 @@ const popoutBtn = document.getElementById("popout-btn");
 if (popoutBtn) {
   popoutBtn.addEventListener("click", async () => {
     // If inside Electron, use IPC to open a new window
-    if (window.resonantOS?.openPopout) {
-      window.resonantOS.openPopout();
+    // Electron PWA: use IPC to open side panel window
+    if (window.resonantosElectronPWA?.openSidePanel) {
+      window.resonantosElectronPWA.openSidePanel();
       return;
     }
     // Browser fallback: open main workspace as a popup window (PWA-style)

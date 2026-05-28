@@ -479,11 +479,12 @@ renderAll();
 const popoutBtn = document.getElementById("popout-btn");
 if (popoutBtn) {
   popoutBtn.addEventListener("click", async () => {
-    if (window.resonantOS?.openPopout) {
-      window.resonantOS.openPopout();
+    // Electron PWA: use IPC to open side panel window
+    if (window.resonantosElectronPWA?.openSidePanel) {
+      window.resonantosElectronPWA.openSidePanel();
       return;
     }
-    // Browser: open a new popup window with this same page
+    // Browser fallback: open a popup window
     const extUrl = chrome.runtime.getURL("src/main-workspace.html");
     window.open(extUrl, "ResonantOS-Popout", "width=1400,height=900,menubar=no,toolbar=no,location=no,status=no");
   });
