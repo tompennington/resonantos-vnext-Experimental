@@ -33,4 +33,8 @@ contextBridge.exposeInMainWorld("resonantosElectronPWA", {
   /** Get current side panel state */
   getSidePanelState: () =>
     ipcRenderer.invoke("resonantos-pwa:get-side-panel-state"),
+
+  /** Open a sidecar tab inside the main window */
+  openSidecarTab: (pagePath) =>
+    ipcRenderer.invoke("resonantos-pwa:open-sidecar-tab", pagePath),
 });

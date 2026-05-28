@@ -974,48 +974,25 @@ if (themeToggleSettings) {
   });
 }
 
-// === Protocol Store full tab ===
-let storeTabId = null;
-const openProtocolStore = async () => {
-  if (storeTabId) {
-    const alive = await chrome.tabs.get(storeTabId).catch(() => null);
-    if (alive) { await chrome.tabs.update(storeTabId, { active: true }).catch(() => undefined); return; }
-    storeTabId = null;
+// === Sidecar tab openers (Electron: open inside shell / Browser: open as tabs) ===
+const openSidecarPage = async (filename) => {
+  // Electron PWA: open inside the main window
+  if (window.resonantosElectronPWA?.openSidecarTab) {
+    window.resonantosElectronPWA.openSidecarTab(filename);
+    return;
   }
+  // Browser fallback: open as Chrome tab
   const tabs = await chrome.tabs.query({});
-  const existing = tabs.find(t => t.url?.includes("protocol-store.html"));
-  if (existing) { storeTabId = existing.id; await chrome.tabs.update(storeTabId, { active: true }).catch(() => undefined); return; }
-  const storeUrl = chrome.runtime.getURL("src/protocol-store.html");
-  const tab = await chrome.tabs.create({ url: storeUrl });
-  storeTabId = tab.id ?? null;
-};
-if (openStoreBtn) openStoreBtn.addEventListener("click", () => void openProtocolStore());
-
-// === Sidecar tab openers ===
-const makeSidecarOpener = (filename) => {
-  let tabId = null;
-  return async () => {
-    if (tabId) {
-      const alive = await chrome.tabs.get(tabId).catch(() => null);
-      if (alive) { await chrome.tabs.update(tabId, { active: true }).catch(() => undefined); return; }
-      tabId = null;
-    }
-    const tabs = await chrome.tabs.query({});
-    const existing = tabs.find(t => t.url?.includes(filename));
-    if (existing) { tabId = existing.id; await chrome.tabs.update(tabId, { active: true }).catch(() => undefined); return; }
-    const url = chrome.runtime.getURL(`src/${filename}`);
-    const tab = await chrome.tabs.create({ url });
-    tabId = tab.id ?? null;
-  };
+  const existing = tabs.find(t => t.url?.includes(filename));
+  if (existing) { await chrome.tabs.update(existing.id, { active: true }).catch(() => undefined); return; }
+  const url = chrome.runtime.getURL(`src/${filename}`);
+  await chrome.tabs.create({ url });
 };
 
-const openShieldTab = makeSidecarOpener("shield-tab.html");
-const openArchiveTab = makeSidecarOpener("archive-tab.html");
-const openAwarenessTab = makeSidecarOpener("awareness-tab.html");
-
-if (openShieldBtn) openShieldBtn.addEventListener("click", () => void openShieldTab());
-if (openArchiveBtn) openArchiveBtn.addEventListener("click", () => void openArchiveTab());
-if (openAwarenessBtn) openAwarenessBtn.addEventListener("click", () => void openAwarenessTab());
+if (openStoreBtn) openStoreBtn.addEventListener("click", () => void openSidecarPage("protocol-store.html"));
+if (openShieldBtn) openShieldBtn.addEventListener("click", () => void openSidecarPage("shield-tab.html"));
+if (openArchiveBtn) openArchiveBtn.addEventListener("click", () => void openSidecarPage("archive-tab.html"));
+if (openAwarenessBtn) openAwarenessBtn.addEventListener("click", () => void openSidecarPage("awareness-tab.html"));
 
 // === Copy mobile URL ===
 if (copyMobileUrl) {

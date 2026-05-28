@@ -242,6 +242,10 @@ function layoutSidePanel() {
       `document.getElementById('open-sidebar').textContent = 'Close Sidebar'`
     ).catch(() => {});
     sidePanelView.setBounds({ x: winW - w, y: 0, width: w, height: winH });
+    // Reposition sidecar if it's open
+    if (sidecarActive && sidecarView) {
+      sidecarView.setBounds({ x: 0, y: 0, width: winW - w, height: winH });
+    }
   } else {
     mainWindow.webContents.executeJavaScript(
       `document.body.style.marginRight = '0';` +
@@ -276,6 +280,54 @@ async function openSidePanel() {
   mainWindow.addBrowserView(sidePanelView);
   sidePanelVisible = true;
   layoutSidePanel();
+}
+
+// ─── Sidecar tabs (open inside main window) ──────────────────────────────────
+
+let sidecarView = null;
+let sidecarActive = false;
+
+async function openSidecarTab(pagePath) {
+  if (!mainWindow || mainWindow.isDestroyed() || !extensionId) return;
+
+  // If same page is already showing, close it (toggle)
+  const targetUrl = `chrome-extension://${extensionId}/src/${pagePath}`;
+  if (sidecarActive && sidecarView) {
+    const currentUrl = sidecarView.webContents.getURL();
+    if (currentUrl === targetUrl) {
+      mainWindow.removeBrowserView(sidecarView);
+      sidecarActive = false;
+      mainWindow.webContents.executeJavaScript(`document.body.style.display = ''`).catch(() => {});
+      return;
+    }
+  }
+
+  // Create or reuse sidecar view
+  if (!sidecarView) {
+    sidecarView = new BrowserView({
+      webPreferences: {
+        preload: preloadPath,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false,
+      },
+    });
+  }
+
+  await sidecarView.webContents.loadURL(targetUrl);
+
+  // Hide main content, show sidecar full-width (minus side panel if open)
+  mainWindow.webContents.executeJavaScript(`document.body.style.display = 'none'`).catch(() => {});
+
+  if (!sidecarActive) {
+    mainWindow.addBrowserView(sidecarView);
+    sidecarActive = true;
+  }
+
+  // Layout: sidecar fills left portion, side panel stays on right
+  const [winW, winH] = mainWindow.getContentSize();
+  const spWidth = sidePanelVisible ? sidePanelWidth : 0;
+  sidecarView.setBounds({ x: 0, y: 0, width: winW - spWidth, height: winH });
 }
 
 // Resize side panel via IPC (drag handle in renderer)
@@ -345,6 +397,7 @@ ipcMain.handle("resonantos-pwa:window-controls", (_event, action) => {
 });
 
 ipcMain.handle("resonantos-pwa:open-side-panel", () => openSidePanel());
+ipcMain.handle("resonantos-pwa:open-sidecar-tab", (_e, pagePath) => openSidecarTab(pagePath));
 ipcMain.handle("resonantos-pwa:resize-side-panel", (_e, width) => resizeSidePanel(width));
 ipcMain.handle("resonantos-pwa:get-side-panel-state", () => ({ visible: sidePanelVisible, width: sidePanelWidth }));
 
