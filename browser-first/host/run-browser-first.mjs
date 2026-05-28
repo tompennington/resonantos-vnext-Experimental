@@ -275,6 +275,12 @@ function sanitizeAssistantContent(providerType, content) {
 const ALPHA_PROVIDER_KEY = process.env.RESONANTOS_ALPHA_KEY || "";
 const ALPHA_MODEL = "llama-3.3-70b-versatile";
 
+// Map UI thinking-depth values to OpenAI reasoning_effort values
+const THINKING_DEPTH_MAP = { minimal: "low", medium: "medium", high: "high" };
+function openaiReasoningEffort(depth) {
+  return THINKING_DEPTH_MAP[depth] || "low";
+}
+
 function providerRouteForModel(model) {
   if (model?.startsWith("gpt-")) {
     return {
@@ -408,7 +414,7 @@ async function executeBridgeChat(payload) {
     body: JSON.stringify({
       model: route.wireModel,
       messages: requestMessages,
-      ...(route.providerId === "shared-openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal" } : {}),
+      ...(route.providerId === "shared-openai" ? { reasoning_effort: openaiReasoningEffort(payload.thinkingDepth) } : {}),
     }),
   });
   const responsePayload = await response.json().catch(() => ({}));
@@ -479,7 +485,7 @@ async function executeInlineAssistant(payload) {
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      ...(route.providerId === "shared-openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal" } : {}),
+      ...(route.providerId === "shared-openai" ? { reasoning_effort: openaiReasoningEffort(payload.thinkingDepth) } : {}),
     }),
   });
   const responsePayload = await response.json().catch(() => ({}));
@@ -798,7 +804,7 @@ async function executeControlPlan(payload) {
         { role: "system", content: plannerPrompt },
         { role: "user", content: userPrompt },
       ],
-      ...(route.providerId === "shared-openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal" } : {}), response_format: { type: "json_object" },
+      ...(route.providerId === "shared-openai" ? { reasoning_effort: openaiReasoningEffort(payload.thinkingDepth) } : {}), response_format: { type: "json_object" },
     }),
   });
   const responsePayload = await response.json().catch(() => ({}));
@@ -875,7 +881,7 @@ async function executeNextAction(payload) {
         { role: "system", content: nextActionPrompt },
         { role: "user", content: userPrompt },
       ],
-      ...(route.providerId === "shared-openai" ? { reasoning_effort: payload.thinkingDepth ?? "minimal" } : {}), response_format: { type: "json_object" },
+      ...(route.providerId === "shared-openai" ? { reasoning_effort: openaiReasoningEffort(payload.thinkingDepth) } : {}), response_format: { type: "json_object" },
     }),
   });
   const responsePayload = await response.json().catch(() => ({}));
