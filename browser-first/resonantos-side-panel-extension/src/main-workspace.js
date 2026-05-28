@@ -481,3 +481,49 @@ thinkingDepthSelect.addEventListener("change", () => void chatSessionStore.persi
 await chatSessionStore.hydrate();
 renderAll();
 
+
+// === Side panel resize handle (Electron PWA) ===
+if (window.resonantosElectronPWA?.resizeSidePanel) {
+  const handle = document.createElement("div");
+  handle.className = "side-panel-resize-handle";
+  document.body.appendChild(handle);
+
+  let dragging = false;
+  let startX = 0;
+  let startWidth = 420;
+
+  handle.addEventListener("mousedown", async (e) => {
+    dragging = true;
+    startX = e.screenX;
+    const state = await window.resonantosElectronPWA.getSidePanelState();
+    startWidth = state?.width ?? 420;
+    handle.classList.add("dragging");
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const delta = startX - e.screenX; // dragging left = wider panel
+    const newWidth = startWidth + delta;
+    window.resonantosElectronPWA.resizeSidePanel(newWidth);
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (dragging) {
+      dragging = false;
+      handle.classList.remove("dragging");
+    }
+  });
+
+  // Position handle at the edge of the margin (where sidebar meets content)
+  const updateHandlePosition = () => {
+    const mr = parseInt(document.body.style.marginRight || "0", 10);
+    if (mr > 0) {
+      handle.style.right = mr + "px";
+      handle.style.display = "block";
+    } else {
+      handle.style.display = "none";
+    }
+  };
+  new MutationObserver(updateHandlePosition).observe(document.body, { attributes: true, attributeFilter: ["style"] });
+}

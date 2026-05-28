@@ -42,7 +42,9 @@ const preloadPath = path.join(__dirname, "preload.mjs");
 let mainWindow = null;
 let sidePanelView = null;
 let sidePanelVisible = false;
-const SIDE_PANEL_WIDTH = 420;
+let sidePanelWidth = 420;
+const SIDE_PANEL_MIN_WIDTH = 320;
+const SIDE_PANEL_MAX_WIDTH = 700;
 let tray = null;
 let bridgeProcess = null;
 let extensionId = null;
@@ -234,14 +236,16 @@ function layoutSidePanel() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const [winW, winH] = mainWindow.getContentSize();
   if (sidePanelVisible && sidePanelView) {
-    // Main content gets left portion, side panel gets right
+    const w = Math.min(sidePanelWidth, winW - 400); // leave at least 400px for main
     mainWindow.webContents.executeJavaScript(
-      `document.body.style.marginRight = '${SIDE_PANEL_WIDTH}px'`
+      `document.body.style.marginRight = '${w}px';` +
+      `document.getElementById('open-sidebar').textContent = 'Close Sidebar'`
     ).catch(() => {});
-    sidePanelView.setBounds({ x: winW - SIDE_PANEL_WIDTH, y: 0, width: SIDE_PANEL_WIDTH, height: winH });
+    sidePanelView.setBounds({ x: winW - w, y: 0, width: w, height: winH });
   } else {
     mainWindow.webContents.executeJavaScript(
-      `document.body.style.marginRight = '0'`
+      `document.body.style.marginRight = '0';` +
+      `document.getElementById('open-sidebar').textContent = 'Open Sidebar'`
     ).catch(() => {});
   }
 }
@@ -271,6 +275,12 @@ async function openSidePanel() {
   
   mainWindow.addBrowserView(sidePanelView);
   sidePanelVisible = true;
+  layoutSidePanel();
+}
+
+// Resize side panel via IPC (drag handle in renderer)
+function resizeSidePanel(newWidth) {
+  sidePanelWidth = Math.max(SIDE_PANEL_MIN_WIDTH, Math.min(SIDE_PANEL_MAX_WIDTH, newWidth));
   layoutSidePanel();
 }
 
@@ -335,6 +345,8 @@ ipcMain.handle("resonantos-pwa:window-controls", (_event, action) => {
 });
 
 ipcMain.handle("resonantos-pwa:open-side-panel", () => openSidePanel());
+ipcMain.handle("resonantos-pwa:resize-side-panel", (_e, width) => resizeSidePanel(width));
+ipcMain.handle("resonantos-pwa:get-side-panel-state", () => ({ visible: sidePanelVisible, width: sidePanelWidth }));
 
 // ─── App lifecycle ────────────────────────────────────────────────────────────
 

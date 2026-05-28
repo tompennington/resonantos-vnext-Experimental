@@ -598,3 +598,21 @@ textarea {
   font-weight: 900;
   padding: 9px 12px;
 }
+
+/* === Side panel resize handle (Electron PWA) === */
+.side-panel-resize-handle {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 9999;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.side-panel-resize-handle:hover,
+.side-panel-resize-handle.dragging {
+  background: rgba(36, 209, 143, 0.5);
+}

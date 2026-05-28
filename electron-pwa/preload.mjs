@@ -22,7 +22,15 @@ contextBridge.exposeInMainWorld("resonantosElectronPWA", {
   windowControl: (action) =>
     ipcRenderer.invoke("resonantos-pwa:window-controls", action),
 
-  /** Open the side-panel window */
+  /** Toggle the side-panel (docked right) */
   openSidePanel: () =>
     ipcRenderer.invoke("resonantos-pwa:open-side-panel"),
+
+  /** Resize the side panel (drag handle) */
+  resizeSidePanel: (width) =>
+    ipcRenderer.invoke("resonantos-pwa:resize-side-panel", width),
+
+  /** Get current side panel state */
+  getSidePanelState: () =>
+    ipcRenderer.invoke("resonantos-pwa:get-side-panel-state"),
 });
