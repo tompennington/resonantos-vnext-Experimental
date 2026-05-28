@@ -125,7 +125,22 @@ function startBridge() {
     });
 
     bridgeProcess.stderr.on("data", (chunk) => {
-      process.stderr.write(`[bridge:err] ${chunk}`);
+      const text = chunk.toString();
+      process.stderr.write(`[bridge:err] ${text}`);
+      // If port is already in use, reuse the existing bridge
+      if (text.includes("EADDRINUSE")) {
+        console.log("[electron-pwa] Port 47773 already in use — reusing existing bridge");
+        try { bridgeProcess.kill(); } catch {}
+        bridgeProcess = null;
+        const configPath = path.join(extRoot, "src", "bridge-config.generated.js");
+        if (existsSync(configPath)) {
+          console.log("[electron-pwa] Found existing bridge config — reusing");
+        } else {
+          console.log("[electron-pwa] Warning: no bridge config found");
+        }
+        done();
+        return;
+      }
     });
 
     bridgeProcess.on("exit", (code, signal) => {
