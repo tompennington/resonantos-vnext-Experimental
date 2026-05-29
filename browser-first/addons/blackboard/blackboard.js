@@ -6,26 +6,47 @@
  *
  * Command protocol:
  *   { channel: "resonantos.blackboard", command: "draw|document|table|embed|image|present|clear|annotate", payload: {...} }
+ *
+ * Data layer: chrome.storage.local (extension) or localStorage (standalone/dev)
  */
 
-// ── Bridge Client ─────────────────────────────────────────────────────────────
+// ── Storage Adapter ───────────────────────────────────────────────────────────
 
-const _bbCfg = (typeof globalThis !== 'undefined' && globalThis.__RESONANTOS_BRIDGE_CONFIG__) || {};
-const _bbUrl = _bbCfg.bridgeUrl ?? 'http://127.0.0.1:47773';
-const _bbToken = _bbCfg.bridgeToken ?? '';
+const bbStorage = {
+  async get(keys) {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      return chrome.storage.local.get(keys);
+    }
+    const result = {};
+    for (const key of (Array.isArray(keys) ? keys : [keys])) {
+      const val = localStorage.getItem(key);
+      if (val !== null) result[key] = JSON.parse(val);
+    }
+    return result;
+  },
+  async set(data) {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      return chrome.storage.local.set(data);
+    }
+    for (const [key, val] of Object.entries(data)) {
+      localStorage.setItem(key, JSON.stringify(val));
+    }
+  }
+};
 
-async function bbBridgeFetch(route, options = {}) {
-  const headers = {};
-  if (_bbToken) headers['X-ResonantOS-Bridge-Token'] = _bbToken;
-  if (options.body) headers['Content-Type'] = 'application/json';
-  const res = await fetch(`${_bbUrl}${route}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.ok === false) throw new Error(data.error ?? `Bridge ${route} failed`);
-  return data;
+const BB_SAVES_KEY = 'resonantos_blackboard_saves';
+
+async function loadBlackboardSaves() {
+  const result = await bbStorage.get(BB_SAVES_KEY);
+  return Array.isArray(result[BB_SAVES_KEY]) ? result[BB_SAVES_KEY] : [];
+}
+
+async function saveBlackboardEntry(entry) {
+  const saves = await loadBlackboardSaves();
+  saves.unshift(entry); // newest first
+  // Keep max 20 saves
+  if (saves.length > 20) saves.length = 20;
+  await bbStorage.set({ [BB_SAVES_KEY]: saves });
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -43,6 +64,8 @@ const modeTabs = document.querySelectorAll(".bb-mode-tabs button");
 const clearBtn = document.getElementById("bb-clear");
 const exportBtn = document.getElementById("bb-export");
 const sendToAugmentorBtn = document.getElementById("bb-send-to-augmentor");
+const bbSaveBtn = document.getElementById("bb-save");
+const bbLoadBtn = document.getElementById("bb-load");
 
 // ── Mode tab wiring ───────────────────────────────────────────────────────────
 
@@ -58,16 +81,122 @@ modeTabs.forEach((btn) => {
   });
 });
 
-clearBtn.addEventListener("click", () => handleCommand("clear", {}));
+clearBtn?.addEventListener("click", () => handleCommand("clear", {}));
 
-exportBtn.addEventListener("click", doExport);
+exportBtn?.addEventListener("click", doExport);
 
-if (sendToAugmentorBtn) {
-  sendToAugmentorBtn.addEventListener("click", () => sendBlackboardToAugmentor());
+sendToAugmentorBtn?.addEventListener("click", () => sendBlackboardToAugmentor());
+
+// ── Save / Load Toolbar Buttons ───────────────────────────────────────────────
+
+function injectSaveLoadUI() {
+  const toolbar = document.getElementById('blackboard-toolbar');
+  if (!toolbar || document.getElementById('bb-save')) return;
+
+  const actionsDiv = toolbar.querySelector('.bb-toolbar-actions');
+  const saveBtn = document.createElement('button');
+  saveBtn.id = 'bb-save';
+  saveBtn.className = 'bb-action-btn';
+  saveBtn.textContent = 'Save';
+  saveBtn.title = 'Save blackboard to storage';
+
+  const loadBtn = document.createElement('button');
+  loadBtn.id = 'bb-load';
+  loadBtn.className = 'bb-action-btn';
+  loadBtn.textContent = 'Load';
+  loadBtn.title = 'Load a saved blackboard';
+
+  if (actionsDiv) {
+    actionsDiv.insertBefore(loadBtn, actionsDiv.firstChild);
+    actionsDiv.insertBefore(saveBtn, actionsDiv.firstChild);
+  }
+
+  saveBtn.addEventListener('click', async () => {
+    const captured = captureBlackboardContent();
+    if (captured.type === 'none' || !captured.content) {
+      saveBtn.textContent = 'Nothing to save';
+      setTimeout(() => { saveBtn.textContent = 'Save'; }, 2000);
+      return;
+    }
+    saveBtn.disabled = true;
+    try {
+      await saveBlackboardEntry({
+        id: `bb-${Date.now()}`,
+        ts: new Date().toISOString(),
+        mode: currentMode,
+        label: captured.label,
+        content: captured.content,
+        type: captured.type,
+      });
+      saveBtn.textContent = 'Saved ✓';
+      setTimeout(() => { saveBtn.textContent = 'Save'; saveBtn.disabled = false; }, 2000);
+    } catch (err) {
+      saveBtn.textContent = 'Save failed';
+      saveBtn.disabled = false;
+      setTimeout(() => { saveBtn.textContent = 'Save'; }, 2500);
+    }
+  });
+
+  loadBtn.addEventListener('click', async () => {
+    const saves = await loadBlackboardSaves();
+    if (!saves.length) {
+      loadBtn.textContent = 'No saves';
+      setTimeout(() => { loadBtn.textContent = 'Load'; }, 2000);
+      return;
+    }
+    showLoadDropdown(saves, loadBtn);
+  });
+}
+
+function showLoadDropdown(saves, anchor) {
+  // Remove existing dropdown
+  document.getElementById('bb-load-dropdown')?.remove();
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'bb-load-dropdown';
+  dropdown.style.cssText = 'position:fixed;z-index:9999;background:#13151c;border:1px solid #1e2332;border-radius:8px;padding:6px 0;min-width:240px;max-height:300px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
+
+  const rect = anchor.getBoundingClientRect();
+  dropdown.style.top  = (rect.bottom + 4) + 'px';
+  dropdown.style.left = Math.max(8, rect.left - 160) + 'px';
+
+  saves.forEach(save => {
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:8px 14px;cursor:pointer;font-size:12px;color:#eef7f0;border-bottom:1px solid #1e2332;';
+    const ts = new Date(save.ts).toLocaleString();
+    item.innerHTML = `<strong>${escBb(save.label)}</strong><br><span style="color:#6b7280;font-size:11px;">${escBb(ts)} · ${escBb(save.mode)}</span>`;
+    item.addEventListener('mouseenter', () => { item.style.background = '#1e2332'; });
+    item.addEventListener('mouseleave', () => { item.style.background = ''; });
+    item.addEventListener('click', () => {
+      dropdown.remove();
+      if (save.type === 'text') {
+        handleCommand('document', { markdown: save.content });
+      } else {
+        handleCommand('document', { markdown: `*Loaded: ${save.label}*\n\n${save.content}` });
+      }
+    });
+    dropdown.appendChild(item);
+  });
+
+  document.body.appendChild(dropdown);
+  const closeDropdown = (e) => {
+    if (!dropdown.contains(e.target) && e.target !== anchor) {
+      dropdown.remove();
+      document.removeEventListener('click', closeDropdown);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeDropdown), 0);
+}
+
+function escBb(str) {
+  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ── Auto-show welcome smiley after a brief delay ─────────────────────────────
-setTimeout(() => { if (currentMode === "welcome") handleCommand("draw", { shapes: [] }); }, 800);
+document.addEventListener('DOMContentLoaded', () => {
+  injectSaveLoadUI();
+  setTimeout(() => { if (currentMode === "welcome") handleCommand("draw", { shapes: [] }); }, 800);
+});
 
 // ── Message listener (from background.js relay) ────────────────────────────────
 try {
@@ -953,34 +1082,32 @@ function sendBlackboardToAugmentor() {
   sendToAugmentorBtn.textContent = "Sending…";
 
   const doSend = async () => {
-    // 1. Save via bridge
-    try {
-      await bbBridgeFetch('/blackboard/send-to-augmentor', {
-        method: 'POST',
-        body: {
-          content: captured.content,
-          mode: currentMode,
-          label: captured.label,
-        },
+    // Relay to side panel via chrome.runtime if available
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      try {
+        await chrome.runtime.sendMessage({
+          channel: "resonantos.blackboard.to_panel",
+          payload: {
+            type: captured.type,
+            content: captured.content,
+            label: captured.label,
+            mode: currentMode,
+            timestamp: new Date().toISOString(),
+          }
+        });
+      } catch (_) {
+        // chrome.runtime not available outside extension context
+      }
+    } else {
+      // Standalone mode: save to storage so side panel can read it
+      await saveBlackboardEntry({
+        id: `bb-send-${Date.now()}`,
+        ts: new Date().toISOString(),
+        mode: currentMode,
+        label: captured.label + ' (sent to Augmentor)',
+        content: captured.content,
+        type: captured.type,
       });
-    } catch (bridgeErr) {
-      console.warn('[Blackboard] bridge save failed, falling back to runtime relay:', bridgeErr.message);
-    }
-
-    // 2. Also relay to side panel via chrome.runtime (if available)
-    try {
-      await chrome.runtime.sendMessage({
-        channel: "resonantos.blackboard.to_panel",
-        payload: {
-          type: captured.type,
-          content: captured.content,
-          label: captured.label,
-          mode: currentMode,
-          timestamp: new Date().toISOString(),
-        }
-      });
-    } catch (_) {
-      // chrome.runtime not available outside extension context
     }
   };
 
@@ -999,17 +1126,22 @@ function sendBlackboardToAugmentor() {
 }
 
 /**
- * saveBlackboard — saves current blackboard content to bridge.
+ * saveBlackboard — saves current blackboard content to chrome.storage / localStorage.
  */
 async function saveBlackboard() {
   const captured = captureBlackboardContent();
-  if (captured.type === "none") return { ok: false, error: 'Nothing to save' };
+  if (captured.type === 'none') return { ok: false, error: 'Nothing to save' };
   try {
-    const result = await bbBridgeFetch('/blackboard/save', {
-      method: 'POST',
-      body: { content: captured.content, mode: currentMode, label: captured.label },
-    });
-    return { ok: true, filename: result.filename };
+    const entry = {
+      id: `bb-${Date.now()}`,
+      ts: new Date().toISOString(),
+      mode: currentMode,
+      label: captured.label,
+      content: captured.content,
+      type: captured.type,
+    };
+    await saveBlackboardEntry(entry);
+    return { ok: true, id: entry.id };
   } catch (err) {
     return { ok: false, error: err.message };
   }

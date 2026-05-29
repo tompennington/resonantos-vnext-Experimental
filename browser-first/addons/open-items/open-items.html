@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:47773;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none';">
   <title>Open Items — ResonantOS</title>
   <link rel="stylesheet" href="open-items.css">
 </head>
@@ -102,12 +102,12 @@
 
   <footer class="app-footer">
     <span style="color:var(--text-dim)">addon.open-items · ResonantOS</span>
-    <span class="footer-pill">Items stored in ~/.resonantos/items/</span>
+    <span class="footer-pill">Items stored in Chrome Storage</span>
   </footer>
 
 </div>
 
-<script src="./bridge-config.generated.js" onerror="void 0"></script>
+
 <script type="module" src="open-items.js"></script>
 </body>
 </html>

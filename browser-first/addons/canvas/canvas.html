@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:47773;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://* https://*;">
   <title>System Map — ResonantOS</title>
   <link rel="stylesheet" href="canvas.css">
 </head>
@@ -40,7 +40,7 @@
     <div id="canvas-empty" class="canvas-empty" style="display:none">
       <div class="empty-icon">◉</div>
       <h3>No nodes configured</h3>
-      <p>Add nodes in <code>~/.resonantos/fleet.json</code> to see your topology here.</p>
+      <p>Click <strong>+ Add Node</strong> above to add your first fleet node.</p>
     </div>
     <canvas id="topology-canvas"></canvas>
     <div id="node-tooltip" class="node-tooltip" style="display:none"></div>
@@ -54,12 +54,11 @@
 
   <footer class="app-footer">
     <span style="color:var(--text-dim)">addon.canvas · ResonantOS</span>
-    <span class="footer-pill">Config: ~/.resonantos/fleet.json + topology.json</span>
+    <span class="footer-pill">Data in Chrome Storage · Ollama probes direct</span>
   </footer>
 
 </div>
 
-<script src="./bridge-config.generated.js" onerror="void 0"></script>
 <script type="module" src="canvas.js"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:47773;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://* https://*;">
   <title>Gradient Performance — ResonantOS</title>
   <link rel="stylesheet" href="gradient-perf.css">
 </head>
@@ -44,7 +44,7 @@
       <div id="training-grid" class="runs-grid"></div>
       <div id="training-empty" class="empty-state" style="display:none">
         <div class="empty-icon">◈</div>
-        <p>No training runs found. Add JSON files to <code>~/.resonantos/training/</code></p>
+        <p>No training runs. Click <strong>+ New Training Run</strong> above to add one.</p>
       </div>
     </div>
 
@@ -65,7 +65,7 @@
       </div>
       <div id="bench-empty" class="empty-state" style="display:none">
         <div class="empty-icon">◈</div>
-        <p>No benchmarks found. Add JSON files to <code>~/.resonantos/benchmarks/</code></p>
+        <p>No benchmarks. Click <strong>+ Add Benchmark</strong> above to add one.</p>
       </div>
     </div>
 
@@ -74,19 +74,18 @@
       <div id="speeds-grid" class="speeds-grid"></div>
       <div id="speeds-empty" class="empty-state" style="display:none">
         <div class="empty-icon">◈</div>
-        <p>No fleet nodes configured. Add nodes to <code>~/.resonantos/fleet.json</code></p>
+        <p>No fleet nodes. Add nodes in Fleet &amp; Compute addon first.</p>
       </div>
     </div>
   </main>
 
   <footer class="app-footer">
     <span style="color:var(--text-dim)">addon.gradient-perf · ResonantOS</span>
-    <span class="footer-pill">Data in ~/.resonantos/training/ + benchmarks/</span>
+    <span class="footer-pill">Data in Chrome Storage</span>
   </footer>
 
 </div>
 
-<script src="./bridge-config.generated.js" onerror="void 0"></script>
 <script type="module" src="gradient-perf.js"></script>
 </body>
 </html>

@@ -1,62 +1,75 @@
 /**
  * task-board.js — ResonantOS Task Board
- * Real data via bridge routes /tasks/list, /tasks/update, /tasks/create
+ * Data layer: chrome.storage.local (extension) or localStorage (standalone/dev)
  */
 
-// ── Bridge Client ──────────────────────────────────────────────────────────
+// ── Storage Adapter ────────────────────────────────────────────────────────
 
-const _cfg = (typeof globalThis !== 'undefined' && globalThis.__RESONANTOS_BRIDGE_CONFIG__) || {};
-const _url = _cfg.bridgeUrl ?? 'http://127.0.0.1:47773';
-const _tok = _cfg.bridgeToken ?? '';
+const storage = {
+  async get(keys) {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      return chrome.storage.local.get(keys);
+    }
+    const result = {};
+    for (const key of (Array.isArray(keys) ? keys : [keys])) {
+      const val = localStorage.getItem(key);
+      if (val !== null) result[key] = JSON.parse(val);
+    }
+    return result;
+  },
+  async set(data) {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      return chrome.storage.local.set(data);
+    }
+    for (const [key, val] of Object.entries(data)) {
+      localStorage.setItem(key, JSON.stringify(val));
+    }
+  }
+};
 
-async function apiFetch(route, options = {}) {
-  const headers = {};
-  if (_tok) headers['X-ResonantOS-Bridge-Token'] = _tok;
-  if (options.body) headers['Content-Type'] = 'application/json';
-  const res = await fetch(`${_url}${route}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.ok === false) throw new Error(data.error ?? `Bridge error: HTTP ${res.status}`);
-  return data;
+// ── Storage Key ────────────────────────────────────────────────────────────
+
+const STORAGE_KEY = 'resonantos_tasks';
+
+const SEED_TASKS = [
+  { id: 'demo-1', title: 'Configure your fleet', desc: 'Add machines to Fleet & Compute', priority: 'P1', status: 'ready', assignee: 'You' },
+  { id: 'demo-2', title: 'Explore the Canvas', desc: 'Open the System Map to see your topology', priority: 'P2', status: 'ready', assignee: 'You' },
+  { id: 'demo-3', title: 'Try the Blackboard', desc: 'Use /draw or /doc commands', priority: 'P3', status: 'ready', assignee: 'You' },
+];
+
+async function loadTasks() {
+  const result = await storage.get(STORAGE_KEY);
+  if (!result[STORAGE_KEY]) {
+    // First run — seed example data
+    await storage.set({ [STORAGE_KEY]: SEED_TASKS });
+    return SEED_TASKS;
+  }
+  return Array.isArray(result[STORAGE_KEY]) ? result[STORAGE_KEY] : [];
 }
 
-async function fetchTasks() {
-  const data = await apiFetch('/tasks/list');
-  return Array.isArray(data.tasks) ? data.tasks : [];
-}
-
-async function updateTask(id, status) {
-  return apiFetch('/tasks/update', { method: 'POST', body: { id, status } });
-}
-
-async function createTask(title, desc, priority, assignee) {
-  return apiFetch('/tasks/create', {
-    method: 'POST',
-    body: { title, desc, priority, assignee },
-  });
+async function saveTasks(tasks) {
+  await storage.set({ [STORAGE_KEY]: tasks });
 }
 
 // ── State ──────────────────────────────────────────────────────────────────
 
 const COLUMNS = ['ready', 'in-progress', 'blocked', 'done'];
 let draggedId = null;
+let _tasks = [];
 
 // ── DOM ────────────────────────────────────────────────────────────────────
 
-const bridgeStatusEl = document.getElementById('bridge-status');
-const boardErrorEl   = document.getElementById('board-error');
-const btnNewTask     = document.getElementById('btn-new-task');
-const btnRefresh     = document.getElementById('btn-refresh');
-const modalOverlay   = document.getElementById('modal-overlay');
-const modalCancel    = document.getElementById('modal-cancel');
-const modalCreate    = document.getElementById('modal-create');
-const newTitleEl     = document.getElementById('new-title');
-const newDescEl      = document.getElementById('new-desc');
-const newPriorityEl  = document.getElementById('new-priority');
-const newAssigneeEl  = document.getElementById('new-assignee');
+const storageStatusEl = document.getElementById('bridge-status');
+const boardErrorEl    = document.getElementById('board-error');
+const btnNewTask      = document.getElementById('btn-new-task');
+const btnRefresh      = document.getElementById('btn-refresh');
+const modalOverlay    = document.getElementById('modal-overlay');
+const modalCancel     = document.getElementById('modal-cancel');
+const modalCreate     = document.getElementById('modal-create');
+const newTitleEl      = document.getElementById('new-title');
+const newDescEl       = document.getElementById('new-desc');
+const newPriorityEl   = document.getElementById('new-priority');
+const newAssigneeEl   = document.getElementById('new-assignee');
 
 // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -98,6 +111,7 @@ function makeCard(task) {
     <div class="card-footer">
       <span class="card-assignee">${task.assignee ? escHtml(task.assignee) : ''}</span>
       <div class="card-move">${moveBtns}</div>
+      <button class="card-delete-btn" data-id="${escHtml(task.id)}" title="Delete task">✕</button>
     </div>`;
 
   // Drag events
@@ -116,20 +130,27 @@ function makeCard(task) {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const newStatus = btn.dataset.move;
-      try {
-        await updateTask(task.id, newStatus);
-        await loadAndRender();
-      } catch (err) {
-        showError(err.message);
+      const idx = _tasks.findIndex(t => t.id === task.id);
+      if (idx !== -1) {
+        _tasks[idx] = { ..._tasks[idx], status: newStatus };
+        await saveTasks(_tasks);
+        renderBoard(_tasks);
       }
     });
+  });
+
+  // Delete button
+  card.querySelector('.card-delete-btn')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    _tasks = _tasks.filter(t => t.id !== task.id);
+    await saveTasks(_tasks);
+    renderBoard(_tasks);
   });
 
   return card;
 }
 
 function renderBoard(tasks) {
-  // Clear columns
   COLUMNS.forEach((s) => {
     const colEl = document.getElementById(statusToColId(s));
     if (colEl) colEl.innerHTML = '';
@@ -153,15 +174,10 @@ function renderBoard(tasks) {
   }
 }
 
-function setBridgeStatus(connected) {
-  if (!bridgeStatusEl) return;
-  if (connected) {
-    bridgeStatusEl.textContent = 'Live';
-    bridgeStatusEl.className = 'bridge-pill live';
-  } else {
-    bridgeStatusEl.textContent = 'Bridge Offline';
-    bridgeStatusEl.className = 'bridge-pill';
-  }
+function setStorageStatus() {
+  if (!storageStatusEl) return;
+  storageStatusEl.textContent = 'Chrome Storage';
+  storageStatusEl.className = 'bridge-pill live';
 }
 
 function showError(msg) {
@@ -175,12 +191,11 @@ function showError(msg) {
 
 async function loadAndRender() {
   try {
-    const tasks = await fetchTasks();
-    renderBoard(tasks);
-    setBridgeStatus(true);
+    _tasks = await loadTasks();
+    renderBoard(_tasks);
+    setStorageStatus();
   } catch (err) {
-    setBridgeStatus(false);
-    showError(`Bridge disconnected — ${err.message}. Tasks stored in ~/.resonantos/tasks/`);
+    showError(`Storage error — ${err.message}`);
     renderBoard([]);
   }
 }
@@ -199,11 +214,11 @@ document.querySelectorAll('.col-cards').forEach((col) => {
     col.classList.remove('drag-over');
     const newStatus = col.dataset.status;
     if (!draggedId || !newStatus) return;
-    try {
-      await updateTask(draggedId, newStatus);
-      await loadAndRender();
-    } catch (err) {
-      showError(err.message);
+    const idx = _tasks.findIndex(t => t.id === draggedId);
+    if (idx !== -1) {
+      _tasks[idx] = { ..._tasks[idx], status: newStatus };
+      await saveTasks(_tasks);
+      renderBoard(_tasks);
     }
   });
 });
@@ -224,15 +239,25 @@ modalCancel?.addEventListener('click', () => {
 });
 
 modalCreate?.addEventListener('click', async () => {
-  const title = newTitleEl?.value.trim() || 'Untitled Task';
-  const desc = newDescEl?.value.trim() || '';
+  const title    = newTitleEl?.value.trim() || 'Untitled Task';
+  const desc     = newDescEl?.value.trim() || '';
   const priority = newPriorityEl?.value || 'P2';
   const assignee = newAssigneeEl?.value.trim() || '';
 
+  const newTask = {
+    id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title,
+    desc,
+    priority,
+    assignee,
+    status: 'ready',
+  };
+
   try {
-    await createTask(title, desc, priority, assignee);
+    _tasks = [..._tasks, newTask];
+    await saveTasks(_tasks);
     if (modalOverlay) modalOverlay.style.display = 'none';
-    await loadAndRender();
+    renderBoard(_tasks);
   } catch (err) {
     showError(err.message);
   }

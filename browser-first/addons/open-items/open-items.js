@@ -1,50 +1,61 @@
 /**
  * open-items.js — ResonantOS Open Items
- * Real data via bridge routes /items/list, /items/create, /items/update
+ * Data layer: chrome.storage.local (extension) or localStorage (standalone/dev)
  */
 
-// ── Bridge Client ──────────────────────────────────────────────────────────
+// ── Storage Adapter ────────────────────────────────────────────────────────
 
-const _cfg = (typeof globalThis !== 'undefined' && globalThis.__RESONANTOS_BRIDGE_CONFIG__) || {};
-const _url = _cfg.bridgeUrl ?? 'http://127.0.0.1:47773';
-const _tok = _cfg.bridgeToken ?? '';
+const storage = {
+  async get(keys) {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      return chrome.storage.local.get(keys);
+    }
+    const result = {};
+    for (const key of (Array.isArray(keys) ? keys : [keys])) {
+      const val = localStorage.getItem(key);
+      if (val !== null) result[key] = JSON.parse(val);
+    }
+    return result;
+  },
+  async set(data) {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      return chrome.storage.local.set(data);
+    }
+    for (const [key, val] of Object.entries(data)) {
+      localStorage.setItem(key, JSON.stringify(val));
+    }
+  }
+};
 
-async function apiFetch(route, options = {}) {
-  const headers = {};
-  if (_tok) headers['X-ResonantOS-Bridge-Token'] = _tok;
-  if (options.body) headers['Content-Type'] = 'application/json';
-  const res = await fetch(`${_url}${route}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.ok === false) throw new Error(data.error ?? `Bridge error: HTTP ${res.status}`);
-  return data;
+// ── Storage Key ────────────────────────────────────────────────────────────
+
+const STORAGE_KEY = 'resonantos_items';
+
+const SEED_ITEMS = [
+  { id: 'item-demo-1', title: 'Set up SSH keys for fleet', desc: 'Configure key-based auth across all fleet machines', priority: 'P1', section: 'attention', status: 'open' },
+  { id: 'item-demo-2', title: 'Review Ternary Sunrise checkpoints', desc: 'Check training logs on Blade R730', priority: 'P2', section: 'pending', status: 'open' },
+];
+
+async function loadItems() {
+  const result = await storage.get(STORAGE_KEY);
+  if (!result[STORAGE_KEY]) {
+    await storage.set({ [STORAGE_KEY]: SEED_ITEMS });
+    return SEED_ITEMS;
+  }
+  return Array.isArray(result[STORAGE_KEY]) ? result[STORAGE_KEY] : [];
 }
 
-async function fetchItems() {
-  const data = await apiFetch('/items/list');
-  return data.grouped ?? { attention: [], pending: [], completed: [] };
+async function saveItems(items) {
+  await storage.set({ [STORAGE_KEY]: items });
 }
 
-async function createItem(title, desc, priority, section) {
-  return apiFetch('/items/create', {
-    method: 'POST',
-    body: { title, desc, priority, section },
-  });
-}
+// ── State ──────────────────────────────────────────────────────────────────
 
-async function updateItem(id, section, status) {
-  return apiFetch('/items/update', {
-    method: 'POST',
-    body: { id, section, status },
-  });
-}
+let _items = [];
 
 // ── DOM ────────────────────────────────────────────────────────────────────
 
-const bridgeEl     = document.getElementById('bridge-status');
+const storageEl    = document.getElementById('bridge-status');
 const errorEl      = document.getElementById('items-error');
 const btnNewItem   = document.getElementById('btn-new-item');
 const btnRefresh   = document.getElementById('btn-refresh');
@@ -84,20 +95,29 @@ function makeCard(item) {
       <span class="item-priority ${esc(item.priority)}">${esc(item.priority)}</span>
     </div>
     ${item.desc ? `<div class="item-desc">${esc(item.desc)}</div>` : ''}
-    <div class="item-actions">${moveBtns.join('')}</div>
+    <div class="item-actions">
+      ${moveBtns.join('')}
+      <button class="item-delete-btn" data-id="${esc(item.id)}" title="Delete item">✕</button>
+    </div>
   `;
 
   card.querySelectorAll('.item-move-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const sec = btn.dataset.section;
       const status = sec === 'completed' ? 'done' : 'open';
-      try {
-        await updateItem(item.id, sec, status);
-        await loadAndRender();
-      } catch (err) {
-        showError(err.message);
+      const idx = _items.findIndex(i => i.id === item.id);
+      if (idx !== -1) {
+        _items[idx] = { ..._items[idx], section: sec, status };
+        await saveItems(_items);
+        renderItems(_items);
       }
     });
+  });
+
+  card.querySelector('.item-delete-btn')?.addEventListener('click', async () => {
+    _items = _items.filter(i => i.id !== item.id);
+    await saveItems(_items);
+    renderItems(_items);
   });
 
   return card;
@@ -112,10 +132,21 @@ function renderSection(section, items) {
   if (countEl) countEl.textContent = String(items.length);
 }
 
-function setBridgeStatus(ok) {
-  if (!bridgeEl) return;
-  bridgeEl.textContent = ok ? 'Live' : 'Bridge Offline';
-  bridgeEl.className = ok ? 'bridge-pill live' : 'bridge-pill';
+function renderItems(items) {
+  const grouped = { attention: [], pending: [], completed: [] };
+  for (const item of items) {
+    const sec = item.section ?? 'pending';
+    if (grouped[sec]) grouped[sec].push(item);
+  }
+  for (const sec of SECTIONS) {
+    renderSection(sec, grouped[sec] ?? []);
+  }
+}
+
+function setStorageStatus() {
+  if (!storageEl) return;
+  storageEl.textContent = 'Chrome Storage';
+  storageEl.className = 'bridge-pill live';
 }
 
 function showError(msg) {
@@ -127,15 +158,12 @@ function showError(msg) {
 
 async function loadAndRender() {
   try {
-    const grouped = await fetchItems();
-    for (const sec of SECTIONS) {
-      renderSection(sec, grouped[sec] ?? []);
-    }
-    setBridgeStatus(true);
+    _items = await loadItems();
+    renderItems(_items);
+    setStorageStatus();
   } catch (err) {
-    setBridgeStatus(false);
-    showError(`Bridge disconnected — ${err.message}. Items stored in ~/.resonantos/items/`);
-    for (const sec of SECTIONS) renderSection(sec, []);
+    showError(`Storage error — ${err.message}`);
+    renderItems([]);
   }
 }
 
@@ -159,10 +187,21 @@ modalCreate?.addEventListener('click', async () => {
   const desc     = newDescEl?.value.trim() || '';
   const priority = newPriorEl?.value || 'P2';
   const section  = newSecEl?.value || 'pending';
+
+  const newItem = {
+    id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title,
+    desc,
+    priority,
+    section,
+    status: section === 'completed' ? 'done' : 'open',
+  };
+
   try {
-    await createItem(title, desc, priority, section);
+    _items = [..._items, newItem];
+    await saveItems(_items);
     if (modalOverlay) modalOverlay.style.display = 'none';
-    await loadAndRender();
+    renderItems(_items);
   } catch (err) {
     showError(err.message);
   }

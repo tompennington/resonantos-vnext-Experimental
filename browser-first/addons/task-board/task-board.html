@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:47773;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none';">
   <title>Task Board — ResonantOS</title>
   <link rel="stylesheet" href="task-board.css">
 </head>
@@ -95,12 +95,11 @@
 
   <footer class="app-footer">
     <span style="color:var(--text-dim)">addon.task-board · ResonantOS</span>
-    <span class="footer-pill">Tasks stored in ~/.resonantos/tasks/</span>
+    <span class="footer-pill">Tasks stored in Chrome Storage</span>
   </footer>
 
 </div>
 
-<script src="./bridge-config.generated.js" onerror="void 0"></script>
 <script type="module" src="task-board.js"></script>
 </body>
 </html>

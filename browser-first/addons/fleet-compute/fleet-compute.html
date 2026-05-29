@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://* https://*;">
   <title>Fleet &amp; Compute — ResonantOS</title>
   <link rel="stylesheet" href="fleet-compute.css">
 </head>
@@ -34,9 +35,9 @@
 
     <div class="header-status">
       <div class="status-dot"></div>
-      <span>Bridge Connected</span>
+      <span>Chrome Storage</span>
       <span style="color:var(--border-bright)">·</span>
-      <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">127.0.0.1:47773</span>
+      <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">local</span>
     </div>
   </header>
 
@@ -234,7 +235,7 @@
 
 </div>
 
-<script src="./bridge-config.generated.js" onerror="void 0"></script>
+
 <script type="module" src="fleet-compute.js"></script>
 </body>
 </html>
