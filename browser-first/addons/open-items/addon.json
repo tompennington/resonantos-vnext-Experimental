@@ -1,0 +1,16 @@
+{
+  "id": "addon.open-items",
+  "name": "Open Items",
+  "version": "1.0.0",
+  "description": "Track open items, pending tasks, and completed work backed by bridge-managed JSON on the host",
+  "author": "Tom Pennington",
+  "mode": "utility",
+  "trust": "host-mediated",
+  "entry": "open-items.html",
+  "contentScripts": [],
+  "commands": ["/items", "/open", "/todo"],
+  "messageChannel": "resonantos.open-items",
+  "capabilities": ["item-read", "item-write", "item-create"],
+  "requires": [],
+  "boundary": "Item data is stored on the host filesystem under ~/.resonantos/items/. No network access except to the local bridge server."
+}

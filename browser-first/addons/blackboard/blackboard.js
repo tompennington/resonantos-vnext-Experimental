@@ -8,6 +8,26 @@
  *   { channel: "resonantos.blackboard", command: "draw|document|table|embed|image|present|clear|annotate", payload: {...} }
  */
 
+// ── Bridge Client ─────────────────────────────────────────────────────────────
+
+const _bbCfg = (typeof globalThis !== 'undefined' && globalThis.__RESONANTOS_BRIDGE_CONFIG__) || {};
+const _bbUrl = _bbCfg.bridgeUrl ?? 'http://127.0.0.1:47773';
+const _bbToken = _bbCfg.bridgeToken ?? '';
+
+async function bbBridgeFetch(route, options = {}) {
+  const headers = {};
+  if (_bbToken) headers['X-ResonantOS-Bridge-Token'] = _bbToken;
+  if (options.body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(`${_bbUrl}${route}`, {
+    method: options.method ?? 'GET',
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) throw new Error(data.error ?? `Bridge ${route} failed`);
+  return data;
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let currentMode = "welcome";
@@ -917,7 +937,7 @@ function captureBlackboardContent() {
 
 /**
  * sendBlackboardToAugmentor — captures current blackboard content and sends
- * it to the side panel via the background relay, injecting it as user context.
+ * it to the side panel via bridge route + chrome.runtime relay.
  */
 function sendBlackboardToAugmentor() {
   if (!sendToAugmentorBtn) return;
@@ -932,16 +952,39 @@ function sendBlackboardToAugmentor() {
   sendToAugmentorBtn.disabled = true;
   sendToAugmentorBtn.textContent = "Sending…";
 
-  chrome.runtime.sendMessage({
-    channel: "resonantos.blackboard.to_panel",
-    payload: {
-      type: captured.type,
-      content: captured.content,
-      label: captured.label,
-      mode: currentMode,
-      timestamp: new Date().toISOString(),
+  const doSend = async () => {
+    // 1. Save via bridge
+    try {
+      await bbBridgeFetch('/blackboard/send-to-augmentor', {
+        method: 'POST',
+        body: {
+          content: captured.content,
+          mode: currentMode,
+          label: captured.label,
+        },
+      });
+    } catch (bridgeErr) {
+      console.warn('[Blackboard] bridge save failed, falling back to runtime relay:', bridgeErr.message);
     }
-  }).then(() => {
+
+    // 2. Also relay to side panel via chrome.runtime (if available)
+    try {
+      await chrome.runtime.sendMessage({
+        channel: "resonantos.blackboard.to_panel",
+        payload: {
+          type: captured.type,
+          content: captured.content,
+          label: captured.label,
+          mode: currentMode,
+          timestamp: new Date().toISOString(),
+        }
+      });
+    } catch (_) {
+      // chrome.runtime not available outside extension context
+    }
+  };
+
+  doSend().then(() => {
     sendToAugmentorBtn.textContent = "Sent ✓";
     setTimeout(() => {
       sendToAugmentorBtn.disabled = false;
@@ -953,4 +996,21 @@ function sendBlackboardToAugmentor() {
     sendToAugmentorBtn.textContent = "Failed — retry";
     setTimeout(() => { sendToAugmentorBtn.textContent = "Send to Augmentor ◈"; }, 2500);
   });
+}
+
+/**
+ * saveBlackboard — saves current blackboard content to bridge.
+ */
+async function saveBlackboard() {
+  const captured = captureBlackboardContent();
+  if (captured.type === "none") return { ok: false, error: 'Nothing to save' };
+  try {
+    const result = await bbBridgeFetch('/blackboard/save', {
+      method: 'POST',
+      body: { content: captured.content, mode: currentMode, label: captured.label },
+    });
+    return { ok: true, filename: result.filename };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 }

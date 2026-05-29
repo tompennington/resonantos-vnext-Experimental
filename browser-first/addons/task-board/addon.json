@@ -1,0 +1,16 @@
+{
+  "id": "addon.task-board",
+  "name": "Task Board",
+  "version": "1.0.0",
+  "description": "Kanban-style task board backed by bridge-managed JSON files on the host",
+  "author": "Tom Pennington",
+  "mode": "utility",
+  "trust": "host-mediated",
+  "entry": "task-board.html",
+  "contentScripts": [],
+  "commands": ["/tasks", "/board", "/kanban"],
+  "messageChannel": "resonantos.task-board",
+  "capabilities": ["task-read", "task-write", "task-create"],
+  "requires": [],
+  "boundary": "Task data is stored on the host filesystem under ~/.resonantos/tasks/. No network access except to the local bridge server."
+}

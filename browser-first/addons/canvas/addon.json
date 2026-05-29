@@ -1,0 +1,16 @@
+{
+  "id": "addon.canvas",
+  "name": "System Map",
+  "version": "1.0.0",
+  "description": "Live topology canvas showing fleet nodes, services, and connections from ~/.resonantos/",
+  "author": "Tom Pennington",
+  "mode": "visual-surface",
+  "trust": "host-mediated",
+  "entry": "canvas.html",
+  "contentScripts": [],
+  "commands": ["/canvas", "/map", "/topology"],
+  "messageChannel": "resonantos.canvas",
+  "capabilities": ["topology-read", "node-status"],
+  "requires": [],
+  "boundary": "Read-only topology display. Node data comes from ~/.resonantos/fleet.json and ~/.resonantos/topology.json via the host bridge. No direct network access to fleet machines."
+}

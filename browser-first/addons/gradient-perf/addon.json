@@ -1,0 +1,16 @@
+{
+  "id": "addon.gradient-perf",
+  "name": "Gradient Performance",
+  "version": "1.0.0",
+  "description": "Training run metrics, benchmark results, and fleet inference speed monitor",
+  "author": "Tom Pennington",
+  "mode": "utility",
+  "trust": "host-mediated",
+  "entry": "gradient-perf.html",
+  "contentScripts": [],
+  "commands": ["/perf", "/training", "/benchmarks"],
+  "messageChannel": "resonantos.gradient-perf",
+  "capabilities": ["training-read", "benchmark-read", "fleet-speed"],
+  "requires": [],
+  "boundary": "Read-only performance display. Training and benchmark data read from ~/.resonantos/training/ and ~/.resonantos/benchmarks/ via host bridge. No write access."
+}

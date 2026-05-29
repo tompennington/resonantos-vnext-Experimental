@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:47773;">
+  <title>Open Items — ResonantOS</title>
+  <link rel="stylesheet" href="open-items.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="header-logo">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <rect x="3" y="4" width="20" height="18" rx="2" stroke="#14F195" stroke-width="1.4" fill="none"/>
+        <line x1="7" y1="9"  x2="19" y2="9"  stroke="#14F195" stroke-width="1.2"/>
+        <line x1="7" y1="13" x2="16" y2="13" stroke="#9945FF" stroke-width="1.2"/>
+        <line x1="7" y1="17" x2="14" y2="17" stroke="#9945FF" stroke-width="1.2" opacity="0.5"/>
+        <circle cx="5.5" cy="9" r="1.5" fill="#14F195"/>
+        <circle cx="5.5" cy="13" r="1.5" fill="#9945FF"/>
+        <circle cx="5.5" cy="17" r="1.5" fill="#6b7280"/>
+      </svg>
+      <div>
+        <div class="header-title">Open Items</div>
+        <div class="header-subtitle">ResonantOS Mission Control</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="bridge-status" class="bridge-pill">Connecting...</span>
+      <button id="btn-new-item" class="btn-primary">+ New Item</button>
+      <button id="btn-refresh" class="btn-secondary">↻</button>
+    </div>
+  </header>
+
+  <main class="items-main">
+    <div id="items-error" class="items-error" style="display:none"></div>
+
+    <div class="sections-grid">
+
+      <section class="items-section" data-section="attention">
+        <div class="section-header">
+          <span class="section-dot dot-red"></span>
+          <span class="section-title">Needs Attention</span>
+          <span class="section-count" id="count-attention">0</span>
+        </div>
+        <div class="items-list" id="list-attention" data-section="attention"></div>
+      </section>
+
+      <section class="items-section" data-section="pending">
+        <div class="section-header">
+          <span class="section-dot dot-yellow"></span>
+          <span class="section-title">Pending</span>
+          <span class="section-count" id="count-pending">0</span>
+        </div>
+        <div class="items-list" id="list-pending" data-section="pending"></div>
+      </section>
+
+      <section class="items-section" data-section="completed">
+        <div class="section-header">
+          <span class="section-dot dot-green"></span>
+          <span class="section-title">Completed</span>
+          <span class="section-count" id="count-completed">0</span>
+        </div>
+        <div class="items-list" id="list-completed" data-section="completed"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- New Item Modal -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <h3>New Item</h3>
+      <label>Title
+        <input id="new-title" type="text" placeholder="Item title" autocomplete="off">
+      </label>
+      <label>Description
+        <textarea id="new-desc" placeholder="Optional description"></textarea>
+      </label>
+      <label>Priority
+        <select id="new-priority">
+          <option value="P0">P0 — Critical</option>
+          <option value="P1">P1 — High</option>
+          <option value="P2" selected>P2 — Normal</option>
+          <option value="P3">P3 — Low</option>
+        </select>
+      </label>
+      <label>Section
+        <select id="new-section">
+          <option value="attention">Needs Attention</option>
+          <option value="pending" selected>Pending</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="btn-secondary">Cancel</button>
+        <button id="modal-create" class="btn-primary">Create Item</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <span style="color:var(--text-dim)">addon.open-items · ResonantOS</span>
+    <span class="footer-pill">Items stored in ~/.resonantos/items/</span>
+  </footer>
+
+</div>
+
+<script src="./bridge-config.generated.js" onerror="void 0"></script>
+<script type="module" src="open-items.js"></script>
+</body>
+</html>

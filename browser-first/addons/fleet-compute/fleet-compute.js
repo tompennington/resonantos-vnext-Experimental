@@ -4,205 +4,67 @@
  * Pure vanilla JS — no framework dependencies
  */
 
-// ─── Mock Data ───────────────────────────────────────────────────────────────
+// ─── Bridge Client ────────────────────────────────────────────────────────────
 
-const MOCK_FLEET = [
-  {
-    id: 'm4-mini',
-    name: 'M4 Mac Mini',
-    ip: '192.168.6.20',
-    status: 'online',
-    kind: 'orchestrator',
-    trust: 'verified',
-    enrollment: 'host',
-    roles: ['orchestrator', 'gateway'],
-    model: 'qwen2.5:7b',
-    tokensPerSec: 40,
-    cpu: 'Apple M4',
-    ram: '24GB',
-    os: 'macOS',
-    uptime: '12d 4h',
-    notes: 'Primary gateway'
-  },
-  {
-    id: 'hal9000',
-    name: 'HAL 9000',
-    ip: '192.168.6.143',
-    status: 'online',
-    kind: 'model-host',
-    trust: 'verified',
-    enrollment: 'host',
-    roles: ['model-host'],
-    model: 'qwen2.5:7b',
-    tokensPerSec: 6.4,
-    cpu: 'Ryzen 5 2400G',
-    ram: '14GB',
-    os: 'Windows',
-    uptime: '3d 7h',
-    notes: null
-  },
-  {
-    id: 'the-og',
-    name: 'The OG GT70',
-    ip: '192.168.7.233',
-    status: 'online',
-    kind: 'model-host',
-    trust: 'verified',
-    enrollment: 'host',
-    roles: ['model-host', 'eval-runner'],
-    model: 'qwen2.5:7b',
-    tokensPerSec: 10.1,
-    cpu: 'Intel i7',
-    ram: '32GB',
-    os: 'Ubuntu 22.04',
-    uptime: '8d 11h',
-    notes: null
-  },
-  {
-    id: 'guardian',
-    name: 'Guardian',
-    ip: '192.168.4.88',
-    status: 'online',
-    kind: 'model-host',
-    trust: 'verified',
-    enrollment: 'host',
-    roles: ['model-host'],
-    model: 'qwen2.5:14b',
-    tokensPerSec: 12.8,
-    cpu: 'AMD Ryzen',
-    ram: '32GB',
-    os: 'Windows 11',
-    uptime: '5d 2h',
-    notes: 'LM Studio'
-  },
-  {
-    id: 'sniper',
-    name: 'Sniper',
-    ip: '192.168.5.160',
-    status: 'offline',
-    kind: 'model-host',
-    trust: 'none',
-    enrollment: 'host',
-    roles: ['model-host'],
-    model: 'qwen2.5:1.5b',
-    tokensPerSec: null,
-    cpu: 'Unknown',
-    ram: '8GB',
-    os: 'Needs Ubuntu',
-    uptime: null,
-    notes: 'Offline 2h+'
-  },
-  {
-    id: 'blade-r730',
-    name: 'Blade R730',
-    ip: '192.168.1.239',
-    status: 'online',
-    kind: 'training',
-    trust: 'verified',
-    enrollment: 'host',
-    roles: ['training', 'eval', 'service'],
-    model: 'ternary-training',
-    tokensPerSec: null,
-    cpu: '8-core Xeon',
-    ram: '503GB',
-    os: 'Ubuntu (Dell R730)',
-    uptime: '22d 6h',
-    notes: 'Ternary Sunrise'
-  },
-  {
-    id: 'blade4',
-    name: 'Blade 4 PE2950',
-    ip: '192.168.7.191',
-    status: 'online',
-    kind: 'utility',
-    trust: 'host',
-    enrollment: 'host',
-    roles: ['utility'],
-    model: 'monitor',
-    tokensPerSec: null,
-    cpu: '2× Xeon 5160',
-    ram: '16GB',
-    os: 'Windows Server 2016',
-    uptime: '14d 3h',
-    notes: 'Training monitor :8080'
-  },
-  {
-    id: 'blade3',
-    name: 'Blade 3 R620',
-    ip: null,
-    status: 'pending',
-    kind: 'model-host',
-    trust: 'pending',
-    enrollment: 'pending',
-    roles: [],
-    model: null,
-    tokensPerSec: null,
-    cpu: 'Xeon E5-2620',
-    ram: '16GB',
-    os: 'Win Server 2012',
-    uptime: null,
-    notes: 'Needs enrollment'
-  },
-  {
-    id: 'p-asus',
-    name: 'P-ASUS',
-    ip: '192.168.6.116',
-    status: 'offline',
-    kind: 'utility',
-    trust: 'none',
-    enrollment: 'host',
-    roles: ['utility'],
-    model: null,
-    tokensPerSec: null,
-    cpu: 'i5-2310 Sandy Bridge',
-    ram: '6GB',
-    os: 'Windows 10 Pro',
-    uptime: null,
-    notes: 'ET2410 AIO'
+const _bridgeCfg = (typeof globalThis !== 'undefined' && globalThis.__RESONANTOS_BRIDGE_CONFIG__) || {};
+const _bridgeUrl = _bridgeCfg.bridgeUrl ?? 'http://127.0.0.1:47773';
+const _bridgeToken = _bridgeCfg.bridgeToken ?? '';
+
+async function bridgeFetch(route, options = {}) {
+  const headers = {};
+  if (_bridgeToken) headers['X-ResonantOS-Bridge-Token'] = _bridgeToken;
+  if (options.body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(`${_bridgeUrl}${route}`, {
+    method: options.method ?? 'GET',
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) throw new Error(data.error ?? `Bridge ${route} failed: HTTP ${res.status}`);
+  return data;
+}
+
+async function fetchFleetStatus() {
+  try {
+    const data = await bridgeFetch('/fleet/status');
+    return Array.isArray(data.nodes) ? data.nodes : [];
+  } catch (err) {
+    console.warn('[Fleet] Bridge unavailable:', err.message);
+    return null; // null = bridge disconnected
   }
-];
+}
 
-const MOCK_ENGINES = [
-  { name: 'Loki Router',   role: 'Intelligent Request Router',      status: 'running', pid: 48291 },
-  { name: 'Purple Squid',  role: 'Multi-Agent Orchestration Layer', status: 'running', pid: 48305 },
-  { name: 'Oracle',        role: 'Distributed Memory & Truth Layer', status: 'running', pid: 48317 },
-  { name: 'Specialists',   role: 'Domain Expert Agent Pool',        status: 'running', pid: 48344 },
-  { name: 'Taskmaster',    role: 'Task Queue & Job Scheduler',      status: 'stopped', pid: null  }
-];
+// ─── Live Data State ─────────────────────────────────────────────────────────
 
-const MOCK_CLOUD = {
-  hetzner: {
-    label: 'Hetzner CPX31',
-    ip: '5.161.249.196',
-    provider: 'Hetzner Cloud',
-    cpu: 23,
-    ram: 61,
-    disk: 34,
-    region: 'FSN1 (Germany)'
-  },
-  services: [
-    { name: 'Lux Wireless Flask', port: 5000, status: 'online', path: '/lux' },
-    { name: 'Matchsire Flask',    port: 5001, status: 'online', path: '/match' },
-    { name: 'Nginx (SSL)',        port: 443,  status: 'online', path: '/' },
-    { name: 'PostgreSQL',         port: 5432, status: 'offline', path: 'db' }
-  ],
-  domains: [
-    { name: 'luxwireless.com',  provider: 'GoDaddy → Hetzner', ssl_days: 64,  ssl_expires: '2026-08-01' },
-    { name: 'matchsire.com',    provider: 'GoDaddy → Hetzner', ssl_days: 75,  ssl_expires: '2026-08-12' }
-  ],
-  runpod: {
-    balance: 28.83,
-    autopay: false,
-    active_pods: 0,
-    last_used: '2026-05-07'
-  },
-  cicd: {
-    repo: 'resonantos-vnext',
-    branch: 'browser-first-preview',
-    last_commit: '3 hours ago',
-    status: 'passing'
+let liveFleet = null;     // null = not yet loaded or bridge disconnected
+let liveCloud = null;     // null = not yet loaded or bridge disconnected
+let liveCompute = null;   // null = not yet loaded or bridge disconnected
+let bridgeConnected = false;
+
+async function fetchCloudStatus() {
+  try {
+    const data = await bridgeFetch('/cloud/status');
+    return Array.isArray(data.providers) ? data.providers : [];
+  } catch (err) {
+    console.warn('[Cloud] Bridge unavailable:', err.message);
+    return null;
   }
-};
+}
+
+async function fetchComputeStatus() {
+  try {
+    const data = await bridgeFetch('/compute/status');
+    return Array.isArray(data.nodes) ? data.nodes : [];
+  } catch (err) {
+    console.warn('[Compute] Bridge unavailable:', err.message);
+    return null;
+  }
+}
+
+// ─── Empty defaults (all data comes from bridge) ────────────────────────────
+
+
+// ─── App State ───────────────────────────────────────────────────────────────
 
 // ─── App State ───────────────────────────────────────────────────────────────
 
@@ -263,14 +125,20 @@ function formatSpeed(tps) {
 // ─── Render: Fleet Tab ───────────────────────────────────────────────────────
 
 function renderFleet() {
-  const online  = MOCK_FLEET.filter(n => n.status === 'online').length;
-  const offline = MOCK_FLEET.filter(n => n.status === 'offline').length;
-  const pending = MOCK_FLEET.filter(n => n.status === 'pending').length;
-  const totalRam = MOCK_FLEET
+  const fleet = liveFleet ?? [];
+  if (!bridgeConnected && liveFleet === null) {
+    const grid = el('nodes-grid');
+    if (grid) grid.innerHTML = `<div class="bridge-error">Bridge disconnected — configure fleet in ~/.resonantos/fleet.json</div>`;
+  }
+  const online  = fleet.filter(n => n.status === 'online').length;
+  const offline = fleet.filter(n => n.status === 'offline').length;
+  const pending = fleet.filter(n => n.status === 'pending').length;
+  const totalRam = fleet
     .filter(n => n.ram)
     .reduce((acc, n) => acc + parseFloat(n.ram.replace(/[^0-9.]/g, '')), 0);
 
-  const runningEngines = MOCK_ENGINES.filter(e => e.status === 'running').length;
+  const runningEngines = 0;
+  const _fleet = fleet;  // local alias for closures below
 
   el('fleet-summary').innerHTML = `
     <div class="summary-tile">
@@ -295,18 +163,18 @@ function renderFleet() {
     </div>
     <div class="summary-tile">
       <div class="tile-label">Engines</div>
-      <div class="tile-value purple">${runningEngines}/${MOCK_ENGINES.length}</div>
+      <div class="tile-value purple">${runningEngines}/${0}</div>
       <div class="tile-sub">services running</div>
     </div>
     <div class="summary-tile">
       <div class="tile-label">Total Nodes</div>
-      <div class="tile-value white">${MOCK_FLEET.length}</div>
+      <div class="tile-value white">${fleet.length}</div>
       <div class="tile-sub">registered</div>
     </div>
   `;
 
   // Engine status table
-  el('engine-table-body').innerHTML = MOCK_ENGINES.map(e => `
+  el('engine-table-body').innerHTML = '<tr><td colspan="4" class="bridge-error">Engine status requires bridge connection</td></tr>';
     <tr>
       <td><span class="engine-name">${e.name}</span></td>
       <td><span class="engine-role">${e.role}</span></td>
@@ -316,7 +184,7 @@ function renderFleet() {
   `).join('');
 
   // Node cards
-  el('nodes-grid').innerHTML = MOCK_FLEET.map(node => {
+  el('nodes-grid').innerHTML = fleet.map(node => {
     const modelDisplay = node.model
       ? `<div class="model-bar">
            <span class="model-name">${node.model}</span>
@@ -370,13 +238,13 @@ function renderFleet() {
   }).join('');
 
   // Update tab badge
-  qs('[data-tab="fleet"] .tab-badge').textContent = `${online}/${MOCK_FLEET.length}`;
+  qs('[data-tab="fleet"] .tab-badge').textContent = `${online}/${fleet.length}`;
 }
 
 // ─── Render: Cloud Tab ───────────────────────────────────────────────────────
 
 function renderCloud() {
-  const { hetzner, services, domains, runpod, cicd } = MOCK_CLOUD;
+  const cloudData = liveCloud ?? {}; const hetzner = cloudData.hetzner ?? {}; const services = cloudData.services ?? []; const domains = cloudData.domains ?? []; const runpod = cloudData.runpod ?? {}; const cicd = cloudData.cicd ?? {};
   const svcOnline = services.filter(s => s.status === 'online').length;
 
   el('cloud-summary').innerHTML = `
@@ -493,9 +361,10 @@ function renderCloud() {
 // ─── Render: Compute Fabric Tab ──────────────────────────────────────────────
 
 function renderFabric() {
-  const verified = MOCK_FLEET.filter(n => n.trust === 'verified').length;
-  const unverified = MOCK_FLEET.filter(n => n.trust === 'none').length;
-  const pendingTrust = MOCK_FLEET.filter(n => n.trust === 'pending').length;
+  const fleet = liveFleet ?? [];
+  const verified = fleet.filter(n => n.trust === 'verified').length;
+  const unverified = fleet.filter(n => n.trust === 'none').length;
+  const pendingTrust = fleet.filter(n => n.trust === 'pending').length;
 
   el('fabric-summary').innerHTML = `
     <div class="summary-tile">
@@ -515,7 +384,7 @@ function renderFabric() {
     </div>
     <div class="summary-tile">
       <div class="tile-label">Enrolled</div>
-      <div class="tile-value white">${MOCK_FLEET.filter(n => n.enrollment === 'host').length}</div>
+      <div class="tile-value white">${fleet.filter(n => n.enrollment === 'host' || n.roles).length}</div>
       <div class="tile-sub">host-mediated</div>
     </div>
     <div class="summary-tile">
@@ -531,7 +400,7 @@ function renderFabric() {
   `;
 
   // Fabric node list (enrollment/trust view)
-  el('fabric-nodes').innerHTML = MOCK_FLEET.map((node, i) => {
+  el('fabric-nodes').innerHTML = fleet.map((node, i) => {
     const enrollSteps = ['key', 'endpoint', 'probe', 'policy'];
     const doneSteps = node.enrollment === 'host' ? (node.status === 'pending' ? 2 : 4) : 1;
 
@@ -607,14 +476,14 @@ function renderFabric() {
       <div class="warning-icon">⚠️</div>
       <div class="warning-body">
         <div class="warning-title">Sniper — Offline 2h+</div>
-        <div class="warning-desc">Node at 192.168.5.160 has not responded to probes for over 2 hours. Trust status degraded to Unverified. Needs Ubuntu install to restore service.</div>
+        <div class="warning-desc">Node has not responded to probes for over 2 hours. Trust status degraded to Unverified. Needs Ubuntu install to restore service.</div>
       </div>
     </div>
     <div class="warning-item">
       <div class="warning-icon">⚠️</div>
       <div class="warning-body">
         <div class="warning-title">P-ASUS — Unverified Trust</div>
-        <div class="warning-desc">Machine at 192.168.6.116 is enrolled but has no trust anchor established. Limited to utility-only roles until SSH key verification completes.</div>
+        <div class="warning-desc">Machine is enrolled but has no trust anchor established. Limited to utility-only roles until SSH key verification completes.</div>
       </div>
     </div>
   `;
@@ -638,10 +507,16 @@ function switchTab(tab) {
 
 // ─── Refresh & Countdown ─────────────────────────────────────────────────────
 
-function doRefresh() {
+async function doRefresh() {
   secondsSinceRefresh = 0;
   updateLastUpdated();
-  // In mock mode — just re-render with same data to simulate a refresh
+  const result = await fetchFleetStatus();
+  if (result !== null) {
+    liveFleet = result;
+    bridgeConnected = true;
+  } else {
+    bridgeConnected = false;
+  }
   renderAll();
 }
 
@@ -649,6 +524,12 @@ function renderAll() {
   renderFleet();
   renderCloud();
   renderFabric();
+  const pill = el('bridge-status-pill');
+  if (pill) {
+    pill.textContent = bridgeConnected ? 'Live' : liveFleet === null ? 'Connecting...' : 'Bridge Offline';
+    pill.style.background = bridgeConnected ? 'rgba(20,241,149,0.15)' : 'rgba(255,107,107,0.15)';
+    pill.style.color = bridgeConnected ? '#14F195' : '#ff6b6b';
+  }
 }
 
 function updateLastUpdated() {
@@ -712,6 +593,9 @@ function init() {
 
   // Activate first tab
   switchTab('fleet');
+
+  // Kick off initial live data fetch
+  doRefresh();
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -36,7 +36,7 @@
       <div class="status-dot"></div>
       <span>Bridge Connected</span>
       <span style="color:var(--border-bright)">·</span>
-      <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">192.168.6.20:18789</span>
+      <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">127.0.0.1:47773</span>
     </div>
   </header>
 
@@ -227,13 +227,14 @@
 
     <div class="footer-right">
       <span class="footer-pill">v1.0.0</span>
-      <span class="footer-pill">Mock Data</span>
+      <span class="footer-pill" id="bridge-status-pill">Connecting...</span>
       <span style="color:var(--text-dim)">addon.fleet-compute · ResonantOS</span>
     </div>
   </footer>
 
 </div>
 
+<script src="./bridge-config.generated.js" onerror="void 0"></script>
 <script type="module" src="fleet-compute.js"></script>
 </body>
 </html>

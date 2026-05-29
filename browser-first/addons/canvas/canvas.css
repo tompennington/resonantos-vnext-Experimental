@@ -1,0 +1,142 @@
+/* ── System Map Canvas — ResonantOS ──────────────────────────────────────── */
+
+:root {
+  --bg: #0d0f14;
+  --border: #1e2332;
+  --text: #eef7f0;
+  --text-dim: #6b7280;
+  --teal: #14F195;
+  --purple: #9945FF;
+  --red: #ff6b6b;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #0b0d12;
+  flex-shrink: 0;
+}
+
+.header-logo { display: flex; align-items: center; gap: 10px; }
+.header-title { font-size: 15px; font-weight: 700; color: var(--teal); }
+.header-subtitle { font-size: 11px; color: var(--text-dim); }
+
+.header-actions { display: flex; align-items: center; gap: 8px; }
+
+.bridge-pill {
+  font-size: 11px; padding: 3px 10px; border-radius: 20px;
+  background: rgba(255,107,107,0.12); color: var(--red);
+  border: 1px solid rgba(255,107,107,0.2);
+}
+.bridge-pill.live {
+  background: rgba(20,241,149,0.1); color: var(--teal);
+  border-color: rgba(20,241,149,0.2);
+}
+
+.btn-secondary {
+  background: transparent; color: var(--text-dim);
+  border: 1px solid var(--border); padding: 6px 12px;
+  border-radius: var(--radius); font-size: 12px; cursor: pointer;
+}
+.btn-secondary:hover { color: var(--text); border-color: #2e3347; }
+
+.canvas-main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#topology-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.canvas-error {
+  position: absolute;
+  top: 16px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,107,107,0.1);
+  border: 1px solid rgba(255,107,107,0.3);
+  border-radius: var(--radius); padding: 10px 16px;
+  color: var(--red); font-size: 13px; z-index: 10;
+  max-width: 500px; text-align: center;
+}
+
+.canvas-empty {
+  position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  text-align: center; color: var(--text-dim);
+}
+.canvas-empty .empty-icon { font-size: 40px; margin-bottom: 12px; color: var(--border); }
+.canvas-empty h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
+.canvas-empty p { font-size: 13px; }
+.canvas-empty code {
+  background: var(--border); padding: 2px 6px; border-radius: 4px;
+  font-family: monospace; font-size: 12px;
+}
+
+.node-tooltip {
+  position: absolute;
+  background: #13151c;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 20;
+  min-width: 160px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.tooltip-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.tooltip-row { color: var(--text-dim); line-height: 1.8; }
+.tooltip-row span { color: var(--text); }
+
+.legend {
+  position: absolute;
+  bottom: 44px; right: 16px;
+  display: flex; gap: 16px;
+  background: rgba(13,15,20,0.8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  font-size: 11px;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; color: var(--text-dim); }
+.dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.dot.online  { background: var(--teal); }
+.dot.offline { background: var(--red); }
+.dot.service { background: var(--purple); }
+
+.app-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 20px; border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--text-dim); flex-shrink: 0;
+  position: relative; z-index: 1;
+}
+.footer-pill {
+  background: rgba(255,255,255,0.05); padding: 2px 8px;
+  border-radius: 10px; font-size: 10px;
+}

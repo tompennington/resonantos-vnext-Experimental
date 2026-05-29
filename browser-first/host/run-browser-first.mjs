@@ -12,6 +12,7 @@ import {
   writeBridgeConfig,
 } from "./bridge-server.mjs";
 import { mergePromotedMarkdownBody } from "./archive-merge.mjs";
+import { addonRoutes } from "./addon-routes.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const hostBinary = path.join(
@@ -2214,6 +2215,7 @@ const bridgeRoutes = [
   { method: "POST", path: "/web/news", handler: executeNewsSearch },
   { method: "POST", path: "/addons/delegate", handler: executeDelegationRecord },
   { method: "POST", path: "/goals", handler: executeGoalRecord },
+  ...addonRoutes,
 ];
 
 const args = parseArgs(process.argv.slice(2));

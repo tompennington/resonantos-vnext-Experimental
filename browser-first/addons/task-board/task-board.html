@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:47773;">
+  <title>Task Board — ResonantOS</title>
+  <link rel="stylesheet" href="task-board.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="header-logo">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="6" height="22" rx="1.5" fill="none" stroke="#14F195" stroke-width="1.4"/>
+        <rect x="10" y="2" width="6" height="16" rx="1.5" fill="none" stroke="#9945FF" stroke-width="1.4"/>
+        <rect x="18" y="2" width="6" height="10" rx="1.5" fill="none" stroke="#14F195" stroke-width="1.4"/>
+      </svg>
+      <div>
+        <div class="header-title">Task Board</div>
+        <div class="header-subtitle">ResonantOS Mission Control</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="bridge-status" class="bridge-pill">Connecting...</span>
+      <button id="btn-new-task" class="btn-primary">+ New Task</button>
+      <button id="btn-refresh" class="btn-secondary" title="Refresh">↻</button>
+    </div>
+  </header>
+
+  <main class="board-main">
+    <div id="board-error" class="board-error" style="display:none"></div>
+
+    <div class="board-columns" id="board-columns">
+      <div class="board-col" data-status="ready">
+        <div class="col-header">
+          <span class="col-title">Ready</span>
+          <span class="col-count" id="count-ready">0</span>
+        </div>
+        <div class="col-cards" id="col-ready" data-status="ready"></div>
+      </div>
+      <div class="board-col" data-status="in-progress">
+        <div class="col-header">
+          <span class="col-title">In Progress</span>
+          <span class="col-count" id="count-in-progress">0</span>
+        </div>
+        <div class="col-cards" id="col-in-progress" data-status="in-progress"></div>
+      </div>
+      <div class="board-col" data-status="blocked">
+        <div class="col-header">
+          <span class="col-title">Blocked</span>
+          <span class="col-count" id="count-blocked">0</span>
+        </div>
+        <div class="col-cards" id="col-blocked" data-status="blocked"></div>
+      </div>
+      <div class="board-col" data-status="done">
+        <div class="col-header">
+          <span class="col-title">Done</span>
+          <span class="col-count" id="count-done">0</span>
+        </div>
+        <div class="col-cards" id="col-done" data-status="done"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- New Task Modal -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <h3>New Task</h3>
+      <label>Title
+        <input id="new-title" type="text" placeholder="Task title" autocomplete="off">
+      </label>
+      <label>Description
+        <textarea id="new-desc" placeholder="Optional description"></textarea>
+      </label>
+      <label>Priority
+        <select id="new-priority">
+          <option value="P0">P0 — Critical</option>
+          <option value="P1">P1 — High</option>
+          <option value="P2" selected>P2 — Normal</option>
+          <option value="P3">P3 — Low</option>
+        </select>
+      </label>
+      <label>Assignee
+        <input id="new-assignee" type="text" placeholder="e.g. Analog 6, Tom" autocomplete="off">
+      </label>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="btn-secondary">Cancel</button>
+        <button id="modal-create" class="btn-primary">Create Task</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <span style="color:var(--text-dim)">addon.task-board · ResonantOS</span>
+    <span class="footer-pill">Tasks stored in ~/.resonantos/tasks/</span>
+  </footer>
+
+</div>
+
+<script src="./bridge-config.generated.js" onerror="void 0"></script>
+<script type="module" src="task-board.js"></script>
+</body>
+</html>

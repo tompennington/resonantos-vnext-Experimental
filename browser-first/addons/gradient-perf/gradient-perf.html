@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:47773;">
+  <title>Gradient Performance — ResonantOS</title>
+  <link rel="stylesheet" href="gradient-perf.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="header-logo">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <polyline points="3,20 8,14 12,17 17,9 22,6" stroke="#14F195" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
+        <circle cx="22" cy="6" r="2" fill="#14F195"/>
+        <circle cx="17" cy="9" r="1.5" fill="#9945FF"/>
+        <line x1="3" y1="22" x2="23" y2="22" stroke="#1e2332" stroke-width="1"/>
+        <line x1="3" y1="4"  x2="3"  y2="22" stroke="#1e2332" stroke-width="1"/>
+      </svg>
+      <div>
+        <div class="header-title">Gradient Performance</div>
+        <div class="header-subtitle">Training · Benchmarks · Fleet Speed</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="bridge-status" class="bridge-pill">Connecting...</span>
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="training">Training</button>
+        <button class="tab-btn" data-tab="benchmarks">Benchmarks</button>
+        <button class="tab-btn" data-tab="fleet-speed">Fleet Speed</button>
+      </div>
+      <button id="btn-refresh" class="btn-secondary">↻</button>
+    </div>
+  </header>
+
+  <main class="perf-main">
+    <div id="perf-error" class="perf-error" style="display:none"></div>
+
+    <!-- Training Tab -->
+    <div id="tab-training" class="tab-content active">
+      <div id="training-grid" class="runs-grid"></div>
+      <div id="training-empty" class="empty-state" style="display:none">
+        <div class="empty-icon">◈</div>
+        <p>No training runs found. Add JSON files to <code>~/.resonantos/training/</code></p>
+      </div>
+    </div>
+
+    <!-- Benchmarks Tab -->
+    <div id="tab-benchmarks" class="tab-content" style="display:none">
+      <div id="benchmarks-table-wrap">
+        <table class="bench-table" id="bench-table">
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>Score</th>
+              <th>Ours</th>
+              <th>Bar</th>
+            </tr>
+          </thead>
+          <tbody id="bench-tbody"></tbody>
+        </table>
+      </div>
+      <div id="bench-empty" class="empty-state" style="display:none">
+        <div class="empty-icon">◈</div>
+        <p>No benchmarks found. Add JSON files to <code>~/.resonantos/benchmarks/</code></p>
+      </div>
+    </div>
+
+    <!-- Fleet Speed Tab -->
+    <div id="tab-fleet-speed" class="tab-content" style="display:none">
+      <div id="speeds-grid" class="speeds-grid"></div>
+      <div id="speeds-empty" class="empty-state" style="display:none">
+        <div class="empty-icon">◈</div>
+        <p>No fleet nodes configured. Add nodes to <code>~/.resonantos/fleet.json</code></p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <span style="color:var(--text-dim)">addon.gradient-perf · ResonantOS</span>
+    <span class="footer-pill">Data in ~/.resonantos/training/ + benchmarks/</span>
+  </footer>
+
+</div>
+
+<script src="./bridge-config.generated.js" onerror="void 0"></script>
+<script type="module" src="gradient-perf.js"></script>
+</body>
+</html>
