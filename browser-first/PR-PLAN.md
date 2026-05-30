@@ -259,20 +259,20 @@ Everything we add is new files in new directories.
 
 All branches are on the private repo:
 
-**tompennington/resonantos-vnext-Experimental**
+**[tompennington/resonantos-vnext-Experimental](https://github.com/tompennington/resonantos-vnext-Experimental)**
 
-| Package | Branch Name |
-|---------|-------------|
-| A. Addon Engine | `tom/core-addon-infrastructure` |
-| B. Context SDK | `tom/core-resonant-context` |
-| C. Security | `tom/core-security-hardening` |
-| D. Platform | `tom/core-platform-infra` |
-| E. Blackboard | `tom/addon-blackboard` |
-| F. Fleet Monitor | `tom/addon-fleet-compute` |
-| G. Task Board | `tom/addon-task-board` |
-| H. System Map | `tom/addon-canvas` |
-| I. Open Items | `tom/addon-open-items` |
-| J. Gradient Perf | `tom/addon-gradient-perf` |
+| Package | Branch (click to view) |
+|---------|------------------------|
+| A. Addon Engine | [tom/core-addon-infrastructure](https://github.com/tompennington/resonantos-vnext-Experimental/tree/tom/core-addon-infrastructure) |
+| B. Context SDK | [tom/core-resonant-context](https://github.com/tompennington/resonantos-vnext-Experimental/tree/tom/core-resonant-context) |
+| C. Security | [tom/core-security-hardening](https://github.com/tompennington/resonantos-vnext-Experimental/tree/tom/core-security-hardening) |
+| D. Platform | [tom/core-platform-infra](https://github.com/tompennington/resonantos-vnext-Experimental/tree/tom/core-platform-infra) |
+| E. Blackboard | [tom/addon-blackboard](https://github.com/tompennington/resonantos-vnext-Experimental/tree/tom/addon-blackboard) |
+| F. Fleet Monitor | [tom/addon-fleet-compute](https://github.com/tompennington/resonantos-vnext-Experimental/tree/tom/addon-fleet-compute) |
+| G. Task Board | [tom/addon-task-board](https://github.com/tompennington/resonantos-vnext-Experimental/tree/tom/addon-task-board) |
+| H. System Map | [tom/addon-canvas](https://github.com/tompennington/resonantos-vnext-Experimental/tree/tom/addon-canvas) |
+| I. Open Items | [tom/addon-open-items](https://github.com/tompennington/resonantos-vnext-Experimental/tree/tom/addon-open-items) |
+| J. Gradient Perf | [tom/addon-gradient-perf](https://github.com/tompennington/resonantos-vnext-Experimental/tree/tom/addon-gradient-perf) |
 
 ---
 
